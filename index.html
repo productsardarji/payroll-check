@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Payroll Check</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* VOICE: calm, exact, money tool — answer first, then proof.
+   IDEA: a cash gauge on a workbench: one reading, the needle, the parts that move it.
+   PICTURE: the 30-day balance line with the buffer as a hard floor and the low point marked.
+   COLOUR and TYPE: aluminium ground, black ink, one orange pointer; Geist.
+   LAYOUT: answer + chart left, what-if controls right; checks, actions, proof below. */
+:root{color-scheme:light dark;--bg:light-dark(#e9eaec,#141517);--card:light-dark(#f6f6f7,#1d1e21);--ink:light-dark(#111214,#ececee);--mute:light-dark(#5b5e66,#9a9ca3);--line:light-dark(#cfd1d5,#33353a);--or:#ff4f00;--ok:light-dark(#127a3a,#4cc77a);--warn:light-dark(#9a6400,#e8b04a);--bad:light-dark(#b3261e,#ff7a70)}
+:root[data-theme=light]{color-scheme:light}:root[data-theme=dark]{color-scheme:dark}
+*{box-sizing:border-box;min-width:0}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 Geist,system-ui,sans-serif;overflow-x:clip}
+.band{padding:clamp(20px,3vw,44px) max(5vw,16px)}
+.wrap{max-width:1240px;margin:0 auto}
+header.band{padding-bottom:0}
+.top{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:baseline;justify-content:space-between}
+.top h1{font-size:17px;font-weight:600;margin:0}
+.badge{font:13px/1.4 "Geist Mono",monospace;color:var(--mute)}
+.badge b{color:var(--ink);font-weight:500}
+.hero{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);gap:24px;align-items:start}
+@media(max-width:900px){.hero{grid-template-columns:minmax(0,1fr)}}
+.answer{font-size:clamp(28px,4vw,44px);line-height:1.08;font-weight:600;margin:6px 0 8px;text-wrap:balance}
+.sub{color:var(--mute);margin:0 0 14px;max-width:64ch}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:16px}
+.fig{position:relative;min-height:320px}
+.fig>svg{position:absolute;inset:0;width:100%;height:100%}
+.ctl label{display:block;font-size:14px;color:var(--mute);margin:14px 0 4px}
+.ctl label:first-child{margin-top:0}
+.ctl output{color:var(--ink);font-weight:500}
+input[type=range]{width:100%;accent-color:var(--or);height:32px}
+input[type=number]{font:16px Geist,sans-serif;width:100%;padding:10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink)}
+.tog{display:flex;gap:10px;align-items:center;font-size:15px;color:var(--ink)!important;min-height:36px;margin:4px 0!important;cursor:pointer}
+.tog input{width:20px;height:20px;accent-color:var(--or)}
+h2{font-size:20px;margin:0 0 4px;font-weight:600}
+.lead{color:var(--mute);margin:0 0 14px;font-size:15px}
+.checks{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px}
+.chk{border-left:4px solid var(--line)}
+.chk .st{font-weight:600;font-size:14px}
+.chk.pass{border-left-color:var(--ok)}.chk.pass .st{color:var(--ok)}
+.chk.warn{border-left-color:var(--warn)}.chk.warn .st{color:var(--warn)}
+.chk.fail{border-left-color:var(--bad)}.chk.fail .st{color:var(--bad)}
+.chk p{margin:4px 0 0;font-size:14px;color:var(--mute)}
+.tiers{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+@media(max-width:900px){.tiers{grid-template-columns:minmax(0,1fr)}}
+.tier h3{font-size:15px;margin:0 0 2px}
+.tier .why{font-size:13px;color:var(--mute);margin:0 0 10px}
+.act{border-top:1px solid var(--line);padding-top:10px;margin-top:10px}
+.act:first-of-type{border-top:0;margin-top:0;padding-top:0}
+.act p{margin:2px 0 8px;font-size:15px}
+.act .imp{font-size:14px;color:var(--mute)}
+button{font:500 15px Geist,sans-serif;min-height:44px;padding:0 14px;border-radius:8px;border:1px solid var(--ink);background:var(--ink);color:var(--bg);cursor:pointer}
+button.ghost{background:transparent;color:var(--ink)}
+button:focus-visible,input:focus-visible,summary:focus-visible{outline:3px solid var(--or);outline-offset:2px}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.done{color:var(--ok);font-weight:500;font-size:14px}
+.blocked{border:2px solid var(--bad)}
+details{margin-top:8px}
+summary{cursor:pointer;font-size:14px;font-weight:500;min-height:32px}
+pre{overflow-x:auto;font:12.5px/1.5 "Geist Mono",monospace;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:10px;margin:6px 0}
+table{border-collapse:collapse;width:100%;font-size:14px}
+th,td{text-align:left;padding:5px 8px;border-bottom:1px solid var(--line);white-space:nowrap}
+td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
+.scroll{overflow-x:auto}
+.grid2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px}
+@media(max-width:900px){.grid2{grid-template-columns:minmax(0,1fr)}}
+.note{font-size:13px;color:var(--mute)}
+.err{color:var(--bad);font-weight:500}
+footer{font-size:14px;color:var(--mute)}
+footer ol{padding-left:20px;margin:6px 0}
+.view{display:inline-flex;border:1px solid var(--line);border-radius:10px;padding:3px;background:var(--card);gap:3px}
+.view button{min-height:38px;border:0;background:transparent;color:var(--ink);font-size:14px;padding:0 12px}
+.view button[aria-pressed=true]{background:var(--ink);color:var(--bg)}
+.hint{font-size:14px;color:var(--mute)}
+body.owner .rev{display:none!important}
+body:not(.owner) .ownonly{display:none!important}
+.legend{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:13px;color:var(--mute);margin-top:6px}
+.legend i{display:inline-block;width:14px;height:3px;vertical-align:middle;margin-right:5px;background:var(--ink)}
+@media(prefers-reduced-motion:no-preference){.fig path.bal{transition:d .3s}}
+</style>
+</head>
+<body class="owner">
+<header class="band"><div class="wrap top">
+  <h1>Payroll Check · <span id="bizname">Northside Plumbing Co.</span></h1>
+  <div class="row" style="gap:10px 14px">
+    <div class="view" role="group" aria-label="Choose a view"><button id="vOwner" aria-pressed="true">Owner view</button><button id="vRev" aria-pressed="false">Under the hood</button></div>
+    <span class="badge rev" id="engine">Engine: starting DuckDB…</span>
+  </div>
+</div></header>
+
+<main>
+<section class="band"><div class="wrap hero">
+  <div>
+    <p class="answer" id="answer">Loading the numbers…</p>
+    <p class="sub" id="sub">Checking the data, finding your regular bills and income, and projecting the next 30 days.</p>
+    <div class="card"><div class="fig" id="fig"><svg id="chart" role="img" aria-label="Projected balance for the next 30 days"></svg></div>
+      <div class="legend"><span><i></i>Projected balance</span><span><i style="background:var(--or)"></i>Your safety buffer</span><span>▲ Payroll day</span></div>
+    </div>
+    <p class="hint ownonly">This is what a business owner sees. Reviewing the build? <a href="#under-the-hood" id="toRev">Look under the hood</a> to see the data checks, the tables and every query.</p>
+    <p class="note">Sample data: Northside Plumbing Co. is a made-up 8-person service business. All names and amounts are invented.</p>
+  </div>
+  <aside class="card ctl" aria-label="What-if controls">
+    <label for="buf">Safety buffer: never go below <output id="bufv"></output></label>
+    <input type="range" id="buf" min="0" max="20000" step="500" value="8000">
+    <div id="lateWrap"><label for="late">Lakeside HOA's $12,400 invoice arrives <output id="latev"></output> days after due <span id="lateusual"></span></label>
+    <input type="range" id="late" min="0" max="40" step="1" value="18"></div>
+    <label class="tog"><input type="checkbox" id="hire"> Add a hire to payroll ($2,100 per pay run)</label>
+    <div class="rev"><label for="bal">Operating balance today</label>
+    <input type="number" id="bal" step="100" inputmode="decimal"></div>
+    <div class="rev"><label style="margin-top:18px">Break the data (to watch the trust checks work)</label>
+    <label class="tog"><input type="checkbox" id="bStale"> Bank feed stopped syncing 6 days ago</label>
+    <label class="tog"><input type="checkbox" id="bDup"> Three supplier payments imported twice</label>
+    <label class="tog"><input type="checkbox" id="bUncat"> Materials and fuel left uncategorized</label></div>
+  </aside>
+</div></section>
+
+<section class="band" style="padding-top:0"><div class="wrap">
+  <h2>1. Can this data be trusted?</h2>
+  <p class="lead rev">These checks run before any advice. If one fails, the assistant gives no advice and tells you what to fix.</p>
+  <p class="ownonly" id="checkline" style="margin:0;font-size:17px"></p>
+  <div class="checks rev" id="checks"></div>
+</div></section>
+
+<section class="band" style="padding-top:0"><div class="wrap">
+  <h2>2. What to do about it</h2>
+  <p class="lead rev">Every suggestion comes with a permission level. The assistant only acts on its own when the action is safe and can be undone.</p>
+  <div id="actions"></div>
+</div></section>
+
+<section class="band rev" style="padding-top:0"><div class="wrap">
+  <h2>3. Show your work</h2>
+  <p class="lead">Every number above comes from a query that ran in this browser on this business's data alone. Nothing was sent to a server.</p>
+  <div class="grid2">
+    <div class="card"><h3 style="margin:0 0 6px;font-size:15px">Regular bills and income the forecast found</h3><div class="scroll" id="rec"></div></div>
+    <div class="card"><h3 style="margin:0 0 6px;font-size:15px">Open invoices and how late each customer usually pays</h3><div class="scroll" id="inv"></div></div>
+  </div>
+  <div class="card" style="margin-top:12px">
+    <h3 style="margin:0 0 6px;font-size:15px">What an AI agent would receive</h3>
+    <p class="note" style="margin:0">One decision record: the inputs, the checks, the answer and the allowed actions. An agent may act only on what this record allows.</p>
+    <details><summary>Show the decision record (JSON)</summary><div class="row" style="margin:6px 0"><button class="ghost" id="copyRec">Copy</button><span class="note" id="copied"></span></div><pre id="record"></pre></details>
+    <details><summary>Show every query that ran (<span id="qcount">0</span>)</summary><div id="qlog"></div></details>
+  </div>
+  <div class="card" style="margin-top:12px">
+    <h3 style="margin:0 0 6px;font-size:15px">Try it on your own bank export</h3>
+    <p class="note" style="margin:0 0 8px">A CSV with <code>date</code>, <code>description</code>, <code>amount</code> (money in positive, money out negative). <code>category</code> and <code>account</code> are optional. The file stays in this browser. With an upload there are no open invoices, so the forecast uses history only.</p>
+    <div class="row"><input type="file" id="file" accept=".csv,text/csv"><button class="ghost" id="reset">Back to sample data</button></div>
+    <p class="note" id="upmsg"></p>
+  </div>
+</div></section>
+</main>
+
+<footer class="band"><div class="wrap">
+  <div class="rev"><b style="color:var(--ink)">How it works</b>
+  <ol>
+    <li>Load one business's transactions into DuckDB running in the browser.</li>
+    <li>Run the trust checks: fresh feed, no duplicates, enough categorized, one-off payments set aside.</li>
+    <li>Find regular bills and income from the gaps between payments, add open invoices at each customer's usual lateness, and project 30 days.</li>
+    <li>Turn the low point into actions, each with a permission level and the rows behind it.</li>
+  </ol></div>
+  <p>Design notes (platform, reliability, privacy, security, APIs, MCP server, AI agents, data) are in the project’s README.md.</p>
+  <p>A prototype by Gursahib Suri for Relay's open call, built with help from Claude. Sample data is invented. Actions are simulated: nothing is sent or moved.</p>
+</div></footer>
+
+<script type="module">
+{
+const $=id=>document.getElementById(id);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const money=n=>(n<0?'−$':'$')+Math.abs(Math.round(n)).toLocaleString('en-US');
+const pad=n=>String(n).padStart(2,'0');
+const iso=d=>d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
+const addDays=(d,n)=>{const x=new Date(d);x.setDate(x.getDate()+n);return x};
+const nice=s=>{const [y,m,d]=s.split('-').map(Number);return new Date(y,m-1,d).toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'})};
+const today=new Date();today.setHours(0,0,0,0);
+const ASOF=iso(today);
+
+/* ---------- sample data (seeded, invented) ---------- */
+let seed=42;const rnd=()=>{seed|=0;seed=seed+0x6D2B79F5|0;let t=Math.imul(seed^seed>>>15,1|seed);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296};
+const between=(a,b)=>Math.round(a+rnd()*(b-a));
+const CUST=[{c:'Lakeside HOA',amt:12400,late:18,dueOff:-6,id:'INV-1042'},{c:'Brightway Property Mgmt',amt:8250,late:9,dueOff:4,id:'INV-1047'},{c:'Elm Street Dental',amt:2800,late:2,dueOff:10,id:'INV-1049'},{c:'Harbor Cafe',amt:1950,late:25,dueOff:20,id:'INV-1050'}];
+function sample(){
+  seed=42;const tx=[],paid=[];const start=addDays(today,-120);
+  const push=(d,desc,amt,cat,acct='Operating')=>tx.push([iso(d),desc,amt,acct,cat]);
+  // payroll anchor: a Friday so pay runs land 2 weeks apart
+  let anchor=new Date(start);while(anchor.getDay()!==5)anchor=addDays(anchor,1);
+  for(let d=new Date(start);d<today;d=addDays(d,1)){
+    const dow=d.getDay(),dom=d.getDate();
+    if(dow===1)push(d,'Square payout',between(6200,7400),'Sales');
+    if(dow===3)push(d,'Ferguson Supply',-between(1500,2400),'Materials');
+    if(dow===4)push(d,'Shell Fleet card',-between(350,480),'Fuel');
+    if(dow===5&&Math.round((d-anchor)/864e5)%14===0)push(d,'Gusto payroll',-between(16400,17300),'Payroll');
+    if(dom===1)push(d,'Oakline Properties rent',-3400,'Rent');
+    if(dom===5)push(d,'Jobber subscription',-169,'Software');
+    if(dom===10)push(d,'QuickBooks',-90,'Software');
+    if(dom===15)push(d,'Hartwell Insurance',-1150,'Insurance');
+    if(dom===20)push(d,'Ally truck loan',-1380,'Loan');
+    if(dom===10||dom===25){push(d,'Transfer to Tax account',-3000,'Transfer');push(d,'Transfer from Operating',3000,'Transfer','Tax')}
+    if(dom===25){push(d,'Transfer to Profit account',-1000,'Transfer');push(d,'Transfer from Operating',1000,'Transfer','Profit')}
+  }
+  // invoice history: one per month per customer, paid late by their habit
+  for(const c of CUST){for(let m=1;m<=4;m++){const due=addDays(today,c.dueOff-30*m);const pd=addDays(due,c.late+between(-2,2));if(pd<today&&pd>start){push(pd,c.c,c.amt,'Invoice payment');paid.push([c.c,iso(due),iso(pd),c.amt])}}}
+  push(addDays(today,-40),'Cityview Builders project deposit',14000,'Sales');
+  push(addDays(today,-12),'AMZN Mktp',-86,null);push(addDays(today,-9),'Home Depot',-212,null);push(addDays(today,-3),'Venmo',-60,null);
+  tx.sort((a,b)=>a[0]<b[0]?-1:1);
+  const inv=CUST.map(c=>[c.id,c.c,c.amt,iso(addDays(today,c.dueOff))]);
+  return {tx,paid,inv,balances:{Operating:19000,Tax:18400,Profit:6200}};
+}
+const toCSV=(head,rows)=>head.join(',')+'\n'+rows.map(r=>r.map(v=>v==null?'':(typeof v==='string'&&/[,"]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v)).join(',')).join('\n');
+
+/* ---------- DuckDB ---------- */
+let db,conn,ver='';const qlog=[];
+async function startDB(){
+  const base=new URL('./duckdb/',location.href).href;
+  try{
+    const mod=await import(base+'duckdb.mjs');
+    // the 35 MB engine ships as two parts (hosting caps file size); join them in memory
+    const parts=await Promise.all(['part1.wasm','part2.wasm'].map(async f=>{const r=await fetch(base+f);if(!r.ok)throw new Error('no local wasm');return new Uint8Array(await r.arrayBuffer())}));
+    const all=new Uint8Array(parts[0].length+parts[1].length);all.set(parts[0]);all.set(parts[1],parts[0].length);const buf=all.buffer;
+    const src=`self.onmessage=e=>{if(e.data&&e.data.__wasm){const B=e.data.__wasm;const f=self.fetch.bind(self);self.fetch=(u,o)=>String(u&&u.url||u).indexOf('duckdb-eh.wasm')>=0?Promise.resolve(new Response(B.slice(0),{headers:{'Content-Type':'application/wasm'}})):f(u,o);self.onmessage=null;importScripts(${JSON.stringify(base+'worker.js')});}}`;
+    const w=new Worker(URL.createObjectURL(new Blob([src],{type:'text/javascript'})));
+    w.postMessage({__wasm:buf},[buf]);
+    db=new mod.AsyncDuckDB(new mod.VoidLogger(),w);await db.instantiate(base+'duckdb-eh.wasm');
+  }catch(e1){
+    const mod=await import('https://cdn.jsdelivr.net/npm/@duckdb/duckdb-wasm@1.29.0/+esm');
+    const b=await mod.selectBundle(mod.getJsDelivrBundles());
+    const wu=URL.createObjectURL(new Blob([`importScripts("${b.mainWorker}");`],{type:'text/javascript'}));
+    db=new mod.AsyncDuckDB(new mod.VoidLogger(),new Worker(wu));await db.instantiate(b.mainModule,b.pthreadWorker);
+  }
+  ver=await db.getVersion();conn=await db.connect();
+}
+const norm=v=>typeof v==='bigint'?Number(v):v;
+async function q(label,sql){const t=performance.now();const res=await conn.query(sql);const ms=performance.now()-t;
+  const rows=res.toArray().map(r=>{const o=r.toJSON();for(const k in o)o[k]=norm(o[k]);return o});
+  qlog.push({label,sql:sql.trim(),ms,n:rows.length});return rows}
+
+/* ---------- state ---------- */
+const S={mode:'sample',balances:null,approvedMove:0,delayed:false,remindersSent:true,remindersUndone:false};
+const D=s=>`DATE '${s}'`;const A=D(ASOF);
+
+async function loadSample(){
+  const s=sample();S.mode='sample';S.balances=s.balances;$('bal').value=s.balances.Operating;
+  await db.registerFileText('raw.csv',toCSV(['date','description','amount','account','category'],s.tx));
+  await db.registerFileText('paid.csv',toCSV(['customer','due_date','paid_date','amount'],s.paid));
+  await db.registerFileText('inv.csv',toCSV(['invoice_id','customer','amount','due_date'],s.inv));
+  await q('Load sample transactions',`CREATE OR REPLACE TABLE raw AS SELECT * FROM read_csv('raw.csv',header=true,columns={'date':'DATE','description':'VARCHAR','amount':'DOUBLE','account':'VARCHAR','category':'VARCHAR'})`);
+  await q('Load paid invoice history',`CREATE OR REPLACE TABLE paid AS SELECT * FROM read_csv('paid.csv',header=true,columns={'customer':'VARCHAR','due_date':'DATE','paid_date':'DATE','amount':'DOUBLE'})`);
+  await q('Load open invoices',`CREATE OR REPLACE TABLE inv AS SELECT * FROM read_csv('inv.csv',header=true,columns={'invoice_id':'VARCHAR','customer':'VARCHAR','amount':'DOUBLE','due_date':'DATE'})`);
+  $('bizname').textContent='Northside Plumbing Co.';$('lateWrap').hidden=false;
+}
+
+async function run(){
+  const buffer=+$('buf').value,late=+$('late').value,hire=$('hire').checked,bal=+$('bal').value||0;
+  const st=$('bStale').checked,du=$('bDup').checked,un=$('bUncat').checked;
+  $('bufv').textContent=money(buffer);$('latev').textContent=late;
+  qlog.length=0;const t0=performance.now();
+  await q('Apply data problems (if any) and flag one-off payments',`CREATE OR REPLACE TABLE tx AS
+WITH t AS (
+  SELECT date, description, amount, coalesce(account,'Operating') account,
+    CASE WHEN ${un} AND category IN ('Materials','Fuel') AND date > ${A} - 30 THEN NULL ELSE category END category
+  FROM raw WHERE NOT (${st} AND date > ${A} - 6)
+  UNION ALL
+  SELECT * FROM (SELECT date, description, amount, coalesce(account,'Operating'), category FROM raw
+    WHERE ${du} AND description = 'Ferguson Supply' ORDER BY date DESC LIMIT 3))
+SELECT *, amount > 0 AND (
+    (count(*) OVER (PARTITION BY description) = 1 AND amount > 5000)
+    OR amount > 3 * median(amount) OVER (PARTITION BY description)) AS is_one_off
+FROM t`);
+  const chk=(await q('Trust checks',`SELECT
+  date_diff('day', max(date), ${A}) AS days_since_last,
+  date_diff('day', min(date), max(date)) AS history_days,
+  (SELECT count(*) FROM (SELECT date, description, amount FROM tx GROUP BY ALL HAVING count(*) > 1)) AS dup_groups,
+  coalesce(sum(abs(amount)) FILTER (WHERE category IS NULL AND amount < 0 AND date > ${A} - 30)
+    / nullif(sum(abs(amount)) FILTER (WHERE amount < 0 AND date > ${A} - 30), 0), 0) AS uncat_share,
+  count(*) FILTER (WHERE is_one_off) AS one_offs,
+  coalesce(sum(amount) FILTER (WHERE is_one_off), 0) AS one_off_total
+FROM tx WHERE account = 'Operating'`))[0];
+  const checks=[
+    {k:'fresh',name:'Bank feed is fresh',s:chk.days_since_last<=2?'pass':'fail',
+     d:chk.days_since_last<=2?`Last transaction ${chk.days_since_last===0?'today':chk.days_since_last===1?'yesterday':chk.days_since_last+' days ago'}.`:`No transactions for ${chk.days_since_last} days. Reconnect the bank feed, then re-run.`},
+    {k:'dups',name:'No double-imported payments',s:chk.dup_groups===0?'pass':'fail',
+     d:chk.dup_groups===0?'No payments with the same date, payee and amount.':`${chk.dup_groups} payment${chk.dup_groups>1?'s':''} appear${chk.dup_groups>1?'':'s'} twice. Remove the duplicates before trusting the balance.`},
+    {k:'cat',name:'Spending is categorized',s:chk.uncat_share<.05?'pass':chk.uncat_share<.10?'warn':'fail',
+     d:`${(chk.uncat_share*100).toFixed(1)}% of the last 30 days of spending has no category${chk.uncat_share>=.10?'. Categorize it so bills aren’t missed.':'.'}`},
+    {k:'hist',name:'Enough history',s:chk.history_days>=90?'pass':'warn',d:`${chk.history_days} days of history (90 needed to spot regular payments).`},
+    {k:'oneoff',name:'One-off payments set aside',s:'pass',d:chk.one_offs?`${chk.one_offs} one-off payment${chk.one_offs>1?'s':''} (${money(chk.one_off_total)}) left out of the forecast so they don’t look regular.`:'None found.'}
+  ];
+  const gate=!checks.some(c=>c.s==='fail');
+
+  await q('Find regular bills and income',`CREATE OR REPLACE TABLE rec AS
+WITH s AS (
+  SELECT description, category, date, amount,
+    date_diff('day', lag(date) OVER (PARTITION BY description ORDER BY date), date) AS gap
+  FROM tx WHERE account = 'Operating' AND NOT is_one_off AND coalesce(category,'') <> 'Invoice payment')
+SELECT description, any_value(category) AS category, count(*) AS times, median(gap) AS every_days,
+  coalesce(stddev_samp(gap), 0) AS gap_sd, round(median(amount)) AS typical_amount, max(date) AS last_date
+FROM s GROUP BY description
+HAVING count(*) >= 3 AND median(gap) BETWEEN 6 AND 35 AND coalesce(stddev_samp(gap), 0) <= 4`);
+
+  const lateRule=S.mode==='sample'?`CASE WHEN i.customer = 'Lakeside HOA' THEN ${late} ELSE coalesce(l.usual_late, 0) END`:'coalesce(l.usual_late, 0)';
+  const evSQL=(remind,move,delay)=>`
+WITH fut AS (
+  SELECT description, category, typical_amount AS amount,
+    CASE WHEN every_days >= 27 THEN (last_date + to_months(CAST(k AS INTEGER)))::DATE
+         ELSE (last_date + to_days(CAST(round(every_days) * k AS INTEGER)))::DATE END AS d
+  FROM rec, range(1, 60) t(k)),
+lt AS (SELECT customer, round(avg(date_diff('day', due_date, paid_date))) AS usual_late FROM paid GROUP BY customer),
+invs AS (
+  SELECT i.customer AS description, 'Invoice payment' AS category, i.amount,
+    greatest(i.due_date + to_days(CAST(${remind?`CASE WHEN i.due_date <= ${A} + 7 THEN 0 ELSE ${lateRule} END`:lateRule} AS INTEGER)), ${A} + ${remind?3:1})::DATE AS d
+  FROM inv i LEFT JOIN lt l USING (customer)),
+ev AS (
+  SELECT * FROM fut WHERE d > ${A} AND d <= ${A} + 30
+  UNION ALL SELECT * FROM invs WHERE d <= ${A} + 30
+  UNION ALL SELECT 'New hire (what-if)', 'Payroll', -2100, d FROM fut WHERE ${hire} AND category = 'Payroll' AND d > ${A} AND d <= ${A} + 30
+  UNION ALL SELECT 'Move from Profit account', 'Transfer', ${move}, (${A} + 1)::DATE WHERE ${move} > 0)
+SELECT description, category, amount,
+  CASE WHEN ${delay} AND description = (SELECT description FROM rec WHERE category = 'Materials' LIMIT 1)
+       AND d = (SELECT min(d) FROM ev e2 WHERE e2.category = 'Materials') THEN d + 7 ELSE d END AS d
+FROM ev`;
+  const balSQL=`WITH days AS (SELECT (${A} + to_days(CAST(i AS INTEGER)))::DATE AS day FROM range(0, 31) t(i)),
+f AS (SELECT d, sum(amount) AS amt FROM ev GROUP BY d)
+SELECT strftime(day, '%Y-%m-%d') AS day, ${bal} + sum(coalesce(amt, 0)) OVER (ORDER BY day) AS balance FROM days LEFT JOIN f ON f.d = day ORDER BY day`;
+  const forecast=async(label,remind,move,delay)=>{
+    await q(label+': upcoming money in and out',`CREATE OR REPLACE TABLE ev AS ${evSQL(remind,move,delay)}`);
+    const days=await q(label+': daily balance',balSQL);
+    let low=days[0];for(const r of days)if(r.balance<low.balance)low=r;
+    const below=days.find(r=>r.balance<buffer);return {days,low,below};
+  };
+  const remindOn=S.mode==='sample'&&gate&&!S.remindersUndone;
+  // baseline without any action, to size the problem
+  const base=await forecast('Baseline (no action)',false,0,false);
+  const events=await q('Upcoming events (baseline)',`SELECT description, category, amount, strftime(d,'%Y-%m-%d') AS d FROM ev ORDER BY d, amount`);
+  const withRem=S.mode==='sample'?await forecast('If reminders get invoices paid on time',true,S.approvedMove,S.delayed):base;
+  // the answer never counts on reminders working: only approved actions change it
+  const fin=await forecast('With approved actions',false,S.approvedMove,S.delayed);
+  const payDays=events.filter(e=>e.category==='Payroll'&&e.description!=='New hire (what-if)').map(e=>e.d);
+  const recRows=await q('Regular payments table',`SELECT description, category, times, every_days, typical_amount, strftime(last_date,'%Y-%m-%d') AS last_date FROM rec ORDER BY typical_amount`);
+  const invRows=S.mode==='sample'?await q('Open invoices table',`SELECT i.invoice_id, i.customer, i.amount, strftime(i.due_date,'%Y-%m-%d') AS due, round(avg(date_diff('day', p.due_date, p.paid_date))) AS usual_late, count(p.customer) AS paid_before FROM inv i LEFT JOIN paid p USING (customer) GROUP BY ALL ORDER BY due`):[];
+  const supplier=events.find(e=>e.category==='Materials'&&e.d<=(base.below||base.low).day);
+  const total=performance.now()-t0;
+
+  /* ---------- render ---------- */
+  $('engine').innerHTML=`Engine: <b>DuckDB ${esc(ver)}</b> in this browser · ${qlog.length} queries · ${total.toFixed(0)} ms`;
+  const L=fin.low;
+  if(!gate){$('answer').textContent='Can’t answer yet: the data isn’t trustworthy.';
+    $('sub').textContent='A forecast built on broken data would look confident and be wrong. Fix the failed checks below and the answer comes back.';}
+  else if(L.balance<0){$('answer').textContent=`No. You’d run out of cash on ${nice(L.day)}.`;$('sub').textContent=`Lowest point ${money(L.balance)}. See the actions below.`;}
+  else if(fin.below){$('answer').textContent=`Yes, but tight. You drop below your ${money(buffer)} buffer on ${nice(fin.below.day)}.`;$('sub').textContent=`Payroll clears, but the lowest point is ${money(L.balance)} on ${nice(L.day)}: ${money(buffer-L.balance)} under your buffer.`;}
+  else {$('answer').textContent=`Yes. You stay above your ${money(buffer)} buffer for the next 30 days.`;$('sub').textContent=`Lowest point ${money(L.balance)} on ${nice(L.day)}.`;}
+  drawChart(fin.days,buffer,payDays,L,gate,remindOn?withRem.days:fin.days);
+  if(gate&&remindOn&&withRem.low.balance>L.balance+1)$('sub').textContent+=` If late clients pay on time: ${money(withRem.low.balance)} (dotted line).`;
+
+  {const f=checks.filter(c=>c.s==='fail');$('checkline').innerHTML=f.length?`<b style="color:var(--bad)">${f.length} data check${f.length>1?'s':''} failed.</b> ${esc(f.map(c=>c.d).join(' '))}`:`<b style="color:var(--ok)">✓ ${checks.length} of ${checks.length} data checks passed</b> <span class="note">(fresh bank feed, no duplicates, spending categorized)</span>`}
+  $('checks').innerHTML=checks.map(c=>`<div class="card chk ${c.s}"><div class="st">${c.s==='pass'?'Pass':c.s==='warn'?'Check':'Fail'} · ${esc(c.name)}</div><p>${esc(c.d)}</p></div>`).join('');
+
+  const tbl=(rows,cols)=>`<table><thead><tr>${cols.map(c=>`<th class="${c[2]||''}">${esc(c[1])}</th>`).join('')}</tr></thead><tbody>${rows.map(r=>`<tr>${cols.map(c=>`<td class="${c[2]||''}">${esc(c[2]==='n'&&typeof r[c[0]]==='number'&&/amount/.test(c[0])?money(r[c[0]]):r[c[0]])}</td>`).join('')}</tr>`).join('')}</tbody></table>`;
+  $('rec').innerHTML=recRows.length?tbl(recRows,[['description','Payee'],['category','Type'],['every_days','Every (days)','n'],['typical_amount','Typical','n'],['last_date','Last seen']]):'<p class="note">None found.</p>';
+  $('inv').innerHTML=invRows.length?tbl(invRows,[['invoice_id','Invoice'],['customer','Customer'],['amount','Amount','n'],['due','Due'],['usual_late','Usually late (days)','n'],['paid_before','Paid before','n']]):'<p class="note">No open invoices for uploaded data.</p>';
+
+  // actions
+  const short=Math.max(0,buffer-base.low.balance);
+  const afterRem=short;
+  const overdue=invRows.filter(r=>r.due<=iso(addDays(today,7)));
+  const moveAmt=Math.min(S.balances?S.balances.Profit:0,Math.ceil(afterRem/100)*100);
+  const proof=(title,sql,rows,cols)=>`<details class="rev"><summary>${esc(title)}</summary>${rows?`<div class="scroll">${tbl(rows,cols)}</div>`:''}<pre>${esc(sql.trim())}</pre></details>`;
+  let html='';
+  if(!gate){
+    html=`<div class="card blocked"><h3 style="margin:0 0 4px;font-size:16px">Advice paused</h3><p style="margin:0 0 8px">The assistant won’t suggest or take any action until these are fixed:</p><ul style="margin:0">${checks.filter(c=>c.s==='fail').map(c=>`<li>${esc(c.d)}</li>`).join('')}</ul><p class="note">This is the rule that lets an agent act without a person checking first: no clean data, no action.</p></div>`;
+  }else{
+    const t1=[],t2=[],t3=[];
+    if(S.mode==='sample'&&overdue.length){
+      const gain=withRem.low.balance-fin.low.balance;
+      t1.push(`<div class="act"><p>Send payment reminders for ${overdue.map(r=>`${esc(r.invoice_id)} (${esc(r.customer)}, ${money(r.amount)})`).join(' and ')}.</p>
+      <p class="imp rev">If they pay on time, your lowest point rises by about ${money(gain)}. Assumption: a reminder gets them to pay by the due date. The forecast doesn\u2019t count on it.</p>
+      <div class="row">${S.remindersUndone?`<button id="aRem">Send reminders</button>`:`<span class="done">✓ Sent by the assistant (simulated)</span><button class="ghost" id="aUndo">Undo</button>`}</div>
+      ${proof('Why these invoices',`SELECT invoice_id, customer, amount, due_date FROM inv WHERE due_date <= ${A} + 7`,overdue,[['invoice_id','Invoice'],['customer','Customer'],['amount','Amount','n'],['due','Due']])}</div>`);
+    }
+    if(short===0&&!t1.length)t1.push('<p class="note">Nothing needed right now.</p>');
+    if(afterRem>0&&moveAmt>0){
+      t2.push(`<div class="act"><p>Move ${money(S.approvedMove||moveAmt)} from your Profit account (${money(S.balances.Profit)}) to Operating before ${nice((base.below||base.low).day)}.</p>
+      <p class="imp rev">Covers the gap to your buffer${moveAmt<afterRem?' partly':''}, even if the reminders don\u2019t work. You can move it back once the invoices land.</p>
+      <div class="row">${S.approvedMove?`<span class="done">✓ Approved by you (simulated)</span><button class="ghost" id="aMoveUndo">Undo</button>`:`<button id="aMove">Approve move</button>`}</div>
+      ${proof('Why this amount',`-- gap = buffer - lowest projected balance, rounded up to $100\nSELECT ceil((${buffer} - min(balance)) / 100) * 100 AS gap FROM daily_balance;  -- ${money(Math.ceil(afterRem/100)*100)}`,null)}</div>`);
+    }
+    if(afterRem>0&&supplier){
+      t2.push(`<div class="act rev"><p>Ask Ferguson Supply to push the ${nice(supplier.d)} payment (~${money(-supplier.amount)}) back 7 days.</p>
+      <p class="imp rev">Moves money out after payroll instead of before it. Check your supplier terms first.</p>
+      <div class="row">${S.delayed?`<span class="done">✓ Approved by you (simulated)</span><button class="ghost" id="aDelUndo">Undo</button>`:`<button id="aDel">Approve</button>`}</div>
+      ${proof('Rows behind this',`SELECT * FROM upcoming WHERE category = 'Materials' AND d <= '${(base.below||base.low).day}'`,[supplier],[['description','Payee'],['amount','Amount','n'],['d','Date']])}</div>`);
+    }
+    if(!t2.length)t2.push('<p class="note">Nothing needs your OK right now.</p>');
+    t3.push(`<div class="act"><p>Use the Tax account${S.balances?` (${money(S.balances.Tax)})`:''}.</p><p class="imp rev">That money is set aside for quarterly taxes. The assistant will never suggest using it, even when cash is short.</p></div>`);
+    t3.push(`<div class="act rev"><p>Skip or shrink payroll.</p><p class="imp rev">Paying people is never an option the assistant offers to trade away.</p></div>`);
+    html=`<div class="tiers">
+      <div class="card tier"><h3>Does it on its own</h3><p class="why">Safe and can be undone. You’re told after.</p>${t1.join('')}</div>
+      <div class="card tier"><h3>Asks you first</h3><p class="why">Moves money or changes a commitment.</p>${t2.join('')}</div>
+      <div class="card tier"><h3>Never</h3><p class="why">Hard rules, whatever the numbers say.</p>${t3.join('')}</div></div>`;
+  }
+  $('actions').innerHTML=html;
+  const on=(id,fn)=>{const el=$(id);if(el)el.onclick=()=>{fn();run()}};
+  on('aUndo',()=>S.remindersUndone=true);on('aRem',()=>S.remindersUndone=false);
+  on('aMove',()=>S.approvedMove=moveAmt);on('aMoveUndo',()=>S.approvedMove=0);
+  on('aDel',()=>S.delayed=true);on('aDelUndo',()=>S.delayed=false);
+
+  const record={as_of:ASOF,business:S.mode==='sample'?'Northside Plumbing Co. (sample)':'Uploaded data',question:'Can I cover payroll and bills for the next 30 days?',
+    trust_checks:checks.map(c=>({check:c.name,status:c.s,detail:c.d})),advice_allowed:gate,
+    answer:gate?{lowest_balance:Math.round(L.balance),lowest_on:L.day,buffer,first_day_below_buffer:fin.below?fin.below.day:null}:null,
+    allowed_actions:gate?{on_its_own:['send_invoice_reminder'],ask_owner_first:['move_between_own_accounts','ask_supplier_to_delay_payment'],never:['use_tax_account','change_payroll','move_money_out_of_business']}:'none until checks pass',
+    engine:'DuckDB '+ver+' in the browser; raw data never left the device'};
+  $('record').textContent=JSON.stringify(record,null,2);
+  $('qcount').textContent=qlog.length;
+  $('qlog').innerHTML=qlog.map((x,i)=>`<p style="margin:10px 0 2px;font-size:14px"><b>${i+1}. ${esc(x.label)}</b> <span class="note">${x.ms.toFixed(1)} ms · ${x.n} rows</span></p><pre>${esc(x.sql)}</pre>`).join('');
+}
+
+/* ---------- chart ---------- */
+let last=null;
+function drawChart(days,buffer,payDays,low,gate,baseDays){last={days,buffer,payDays,low,gate,baseDays};paint()}
+function paint(){if(!last)return;const s=$('chart');const W=s.clientWidth,H=s.clientHeight;if(!W)return;
+  const {days,buffer,payDays,low,gate,baseDays}=last;const narrow=W<520;
+  const m={l:narrow?44:62,r:14,t:18,b:30};const vals=days.map(d=>d.balance).concat(baseDays.map(d=>d.balance),[buffer,0]);
+  let mn=Math.min(...vals),mx=Math.max(...vals);const padv=(mx-mn)*.08||1000;mn-=padv;mx+=padv;
+  const x=i=>m.l+i*(W-m.l-m.r)/(days.length-1),y=v=>m.t+(mx-v)*(H-m.t-m.b)/(mx-mn);
+  const step=Math.pow(10,Math.floor(Math.log10((mx-mn)/4)));const tk=[];for(let v=Math.ceil(mn/step)*step;v<=mx;v+=step*(narrow?4:2))tk.push(v);
+  const path=a=>a.map((d,i)=>(i?'L':'M')+x(i).toFixed(1)+','+y(d.balance).toFixed(1)).join('');
+  const li=days.findIndex(d=>d.day===low.day);const fmtK=v=>(v<0?'−':'')+'$'+Math.abs(v/1000).toFixed(Math.abs(v)<10000&&v%1000?1:0)+'k';
+  const changed=baseDays.some((d,i)=>Math.abs(d.balance-days[i].balance)>1);
+  s.innerHTML=`<g font-family="Geist,sans-serif" font-size="12" fill="var(--mute)">
+  ${tk.map(v=>`<line x1="${m.l}" x2="${W-m.r}" y1="${y(v)}" y2="${y(v)}" stroke="var(--line)"/><text x="${m.l-8}" y="${y(v)+4}" text-anchor="end">${fmtK(v)}</text>`).join('')}
+  ${days.map((d,i)=>i%(narrow?10:5)===0?`<text x="${x(i)}" y="${H-8}" text-anchor="${i===days.length-1?'end':i===0?'start':'middle'}">${nice(d.day).replace(/^\w+, /,'')}</text>`:'').join('')}
+  ${mn<0?`<line x1="${m.l}" x2="${W-m.r}" y1="${y(0)}" y2="${y(0)}" stroke="var(--bad)" stroke-width="1.5"/>`:''}
+  <line x1="${m.l}" x2="${W-m.r}" y1="${y(buffer)}" y2="${y(buffer)}" stroke="#ff4f00" stroke-width="2" stroke-dasharray="6 4"/>
+  ${changed?`<path d="${path(baseDays)}" fill="none" stroke="var(--mute)" stroke-width="1.5" stroke-dasharray="3 3"/>`:''}
+  <path class="bal" d="${path(days)}" fill="none" stroke="var(--ink)" stroke-width="2.5" opacity="${gate?1:.3}"/>
+  ${payDays.map(p=>{const i=days.findIndex(d=>d.day===p);return i<0?'':`<text x="${x(i)}" y="${H-m.b-4}" text-anchor="middle" fill="var(--ink)" font-size="11">▲</text>`}).join('')}
+  ${gate&&li>=0?`<circle cx="${x(li)}" cy="${y(low.balance)}" r="5" fill="#ff4f00" stroke="var(--card)" stroke-width="2"/><text x="${Math.min(Math.max(x(li),m.l+60),W-m.r-60)}" y="${Math.max(y(low.balance)-12,14)}" text-anchor="middle" fill="var(--ink)" font-weight="600" stroke="var(--card)" stroke-width="4" paint-order="stroke">Low ${money(low.balance)}</text>`:''}
+  ${!gate?`<text x="${(m.l+W-m.r)/2}" y="${H/2}" text-anchor="middle" fill="var(--bad)" font-size="15" font-weight="600">Not trusted: fix the data checks</text>`:''}
+  ${changed&&gate?`<text x="${W-m.r}" y="${m.t-4}" text-anchor="end">dotted = if invoices are paid on time</text>`:''}</g>`}
+const ro=new ResizeObserver(paint);ro.observe($('fig'));
+
+/* ---------- upload ---------- */
+async function loadUpload(file){
+  const text=await file.text();await db.registerFileText('up.csv',text);
+  await q('Read uploaded CSV',`CREATE OR REPLACE TABLE up AS SELECT * FROM read_csv_auto('up.csv', header=true)`);
+  const cols=(await q('Inspect columns',`SELECT column_name FROM (DESCRIBE up)`)).map(r=>r.column_name);
+  const find=(...names)=>cols.find(c=>names.includes(c.toLowerCase().trim()));
+  const cd=find('date','posted date','transaction date'),cdesc=find('description','name','memo','payee'),ca=find('amount'),ccat=find('category'),cacc=find('account');
+  if(!cd||!cdesc||!ca)throw new Error('Need columns named date, description and amount. Found: '+cols.join(', '));
+  const qi=c=>'"'+c.replace(/"/g,'""')+'"';
+  await q('Map uploaded columns',`CREATE OR REPLACE TABLE raw AS SELECT CAST(${qi(cd)} AS DATE) AS date, CAST(${qi(cdesc)} AS VARCHAR) AS description, CAST(${qi(ca)} AS DOUBLE) AS amount, ${cacc?`CAST(${qi(cacc)} AS VARCHAR)`:`'Operating'`} AS account, ${ccat?`CAST(${qi(ccat)} AS VARCHAR)`:'NULL'} AS category FROM up WHERE ${qi(ca)} IS NOT NULL`);
+  await q('No invoices for uploads',`CREATE OR REPLACE TABLE inv AS SELECT * FROM inv WHERE false`);
+  await q('No invoice history for uploads',`CREATE OR REPLACE TABLE paid AS SELECT * FROM paid WHERE false`);
+  const n=(await q('Count rows',`SELECT count(*) AS n FROM raw`))[0].n;
+  S.mode='upload';S.balances=null;S.approvedMove=0;S.delayed=false;$('bizname').textContent=file.name;$('lateWrap').hidden=true;
+  if(!$('bal').value)$('bal').value=0;
+  $('upmsg').textContent=`Loaded ${n} transactions from ${file.name}. Set your operating balance above. Note: the trust checks compare against today’s date, so an old export will fail the freshness check, as it should.`;
+}
+
+/* ---------- wire up ---------- */
+let busy=false,again=false;
+async function go(){if(busy){again=true;return}busy=true;try{await run()}catch(e){$('answer').textContent='Something went wrong running the queries.';$('sub').innerHTML=`<span class="err">${esc(e.message)}</span>`;console.error(e)}busy=false;if(again){again=false;go()}}
+['buf','late','hire','bal','bStale','bDup','bUncat'].forEach(id=>$(id).addEventListener('input',go));
+$('copyRec').onclick=async()=>{try{await navigator.clipboard.writeText($('record').textContent);$('copied').textContent='Copied.'}catch(e){$('copied').textContent='Copy blocked here. Select the text instead.'}};
+$('file').onchange=async e=>{const f=e.target.files[0];if(!f)return;try{await loadUpload(f);go()}catch(err){$('upmsg').innerHTML=`<span class="err">${esc(err.message)}</span>`}};
+$('reset').onclick=async()=>{S.approvedMove=0;S.delayed=false;S.remindersUndone=false;$('file').value='';$('upmsg').textContent='';await loadSample();go()};
+$('lateusual').textContent='(usually 18)';
+const setView=v=>{const rev=v==='reviewer';document.body.classList.toggle('owner',!rev);$('vOwner').setAttribute('aria-pressed',String(!rev));$('vRev').setAttribute('aria-pressed',String(rev));if((location.hash==='#under-the-hood')!==rev){try{history.replaceState(null,'',rev?'#under-the-hood':location.pathname+location.search)}catch(e){location.hash=rev?'under-the-hood':''}}};
+$('vOwner').onclick=()=>setView('owner');$('vRev').onclick=()=>setView('reviewer');
+$('toRev').onclick=e=>{e.preventDefault();setView('reviewer');$('checks').scrollIntoView({behavior:'smooth'})};
+addEventListener('hashchange',()=>setView(location.hash==='#under-the-hood'?'reviewer':'owner'));
+setView(location.hash==='#under-the-hood'?'reviewer':'owner');
+(async()=>{try{await startDB();await loadSample();await go()}catch(e){
+  $('engine').innerHTML='<span class="err">DuckDB could not start in this viewer</span>';
+  $('answer').textContent='The data engine couldn’t start here.';
+  $('sub').innerHTML=`This demo runs DuckDB inside your browser. This viewer blocked it (${esc(e.message)}). Open the downloadable HTML file in Chrome, Edge or Safari instead.`;console.error(e)}})();
+}
+</script>
+</body>
+</html>

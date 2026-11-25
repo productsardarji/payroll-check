@@ -1,0 +1,110 @@
+date,description,amount,account,category
+2026-07-29,Ferguson Supply,-2041,Operating,Materials
+2026-07-30,Shell Fleet card,-408,Operating,Fuel
+2026-07-31,Gusto payroll,-17167,Operating,Payroll
+2026-08-01,Oakline Properties rent,-3400,Operating,Rent
+2026-08-03,Square payout,7004,Operating,Sales
+2026-08-05,Ferguson Supply,-1657,Operating,Materials
+2026-08-05,Jobber subscription,-169,Operating,Software
+2026-08-06,Shell Fleet card,-418,Operating,Fuel
+2026-08-08,Elm Street Dental,2800,Operating,Invoice payment
+2026-08-09,Lakeside HOA,12400,Operating,Invoice payment
+2026-08-10,Square payout,6528,Operating,Sales
+2026-08-10,QuickBooks,-90,Operating,Software
+2026-08-10,Transfer to Tax account,-3000,Operating,Transfer
+2026-08-11,Brightway Property Mgmt,8250,Operating,Invoice payment
+2026-08-12,Ferguson Supply,-2062,Operating,Materials
+2026-08-13,Shell Fleet card,-463,Operating,Fuel
+2026-08-14,Gusto payroll,-16825,Operating,Payroll
+2026-08-15,Hartwell Insurance,-1150,Operating,Insurance
+2026-08-17,Square payout,6500,Operating,Sales
+2026-08-19,Ferguson Supply,-2294,Operating,Materials
+2026-08-20,Shell Fleet card,-447,Operating,Fuel
+2026-08-20,Ally truck loan,-1380,Operating,Loan
+2026-08-24,Square payout,6568,Operating,Sales
+2026-08-25,Transfer to Tax account,-3000,Operating,Transfer
+2026-08-25,Transfer to Profit account,-1000,Operating,Transfer
+2026-08-26,Ferguson Supply,-1678,Operating,Materials
+2026-08-27,Shell Fleet card,-415,Operating,Fuel
+2026-08-28,Gusto payroll,-17018,Operating,Payroll
+2026-08-31,Square payout,6933,Operating,Sales
+2026-09-01,Oakline Properties rent,-3400,Operating,Rent
+2026-09-02,Ferguson Supply,-1503,Operating,Materials
+2026-09-03,Shell Fleet card,-411,Operating,Fuel
+2026-09-05,Jobber subscription,-169,Operating,Software
+2026-09-07,Square payout,7205,Operating,Sales
+2026-09-07,Lakeside HOA,12400,Operating,Invoice payment
+2026-09-07,Brightway Property Mgmt,8250,Operating,Invoice payment
+2026-09-09,Ferguson Supply,-1546,Operating,Materials
+2026-09-09,Elm Street Dental,2800,Operating,Invoice payment
+2026-09-10,Shell Fleet card,-427,Operating,Fuel
+2026-09-10,QuickBooks,-90,Operating,Software
+2026-09-10,Transfer to Tax account,-3000,Operating,Transfer
+2026-09-11,Gusto payroll,-16428,Operating,Payroll
+2026-09-13,Harbor Cafe,1950,Operating,Invoice payment
+2026-09-14,Square payout,6520,Operating,Sales
+2026-09-15,Hartwell Insurance,-1150,Operating,Insurance
+2026-09-16,Ferguson Supply,-1556,Operating,Materials
+2026-09-17,Shell Fleet card,-374,Operating,Fuel
+2026-09-20,Ally truck loan,-1380,Operating,Loan
+2026-09-21,Square payout,7140,Operating,Sales
+2026-09-23,Ferguson Supply,-1977,Operating,Materials
+2026-09-24,Shell Fleet card,-354,Operating,Fuel
+2026-09-25,Gusto payroll,-16556,Operating,Payroll
+2026-09-25,Transfer to Tax account,-3000,Operating,Transfer
+2026-09-25,Transfer to Profit account,-1000,Operating,Transfer
+2026-09-28,Square payout,7211,Operating,Sales
+2026-09-30,Ferguson Supply,-1939,Operating,Materials
+2026-10-01,Shell Fleet card,-455,Operating,Fuel
+2026-10-01,Oakline Properties rent,-3400,Operating,Rent
+2026-10-05,Square payout,6583,Operating,Sales
+2026-10-05,Jobber subscription,-169,Operating,Software
+2026-10-06,Lakeside HOA,12400,Operating,Invoice payment
+2026-10-07,Ferguson Supply,-1905,Operating,Materials
+2026-10-07,Elm Street Dental,2800,Operating,Invoice payment
+2026-10-08,Shell Fleet card,-355,Operating,Fuel
+2026-10-09,Gusto payroll,-16446,Operating,Payroll
+2026-10-09,Harbor Cafe,1950,Operating,Invoice payment
+2026-10-10,QuickBooks,-90,Operating,Software
+2026-10-10,Transfer to Tax account,-3000,Operating,Transfer
+2026-10-11,Brightway Property Mgmt,8250,Operating,Invoice payment
+2026-10-12,Square payout,6868,Operating,Sales
+2026-10-14,Ferguson Supply,-2037,Operating,Materials
+2026-10-15,Shell Fleet card,-382,Operating,Fuel
+2026-10-15,Hartwell Insurance,-1150,Operating,Insurance
+2026-10-16,Cityview Builders project deposit,14000,Operating,Sales
+2026-10-19,Square payout,6975,Operating,Sales
+2026-10-20,Ally truck loan,-1380,Operating,Loan
+2026-10-21,Ferguson Supply,-1689,Operating,Materials
+2026-10-22,Shell Fleet card,-389,Operating,Fuel
+2026-10-23,Gusto payroll,-17065,Operating,Payroll
+2026-10-25,Transfer to Tax account,-3000,Operating,Transfer
+2026-10-25,Transfer to Profit account,-1000,Operating,Transfer
+2026-10-26,Square payout,7230,Operating,Sales
+2026-10-28,Ferguson Supply,-1957,Operating,Materials
+2026-10-29,Shell Fleet card,-377,Operating,Fuel
+2026-11-01,Oakline Properties rent,-3400,Operating,Rent
+2026-11-02,Square payout,6541,Operating,Sales
+2026-11-04,Ferguson Supply,-1764,Operating,Materials
+2026-11-05,Shell Fleet card,-360,Operating,Fuel
+2026-11-05,Jobber subscription,-169,Operating,Software
+2026-11-05,Lakeside HOA,12400,Operating,Invoice payment
+2026-11-06,Gusto payroll,-16994,Operating,Payroll
+2026-11-08,Brightway Property Mgmt,8250,Operating,Invoice payment
+2026-11-09,Square payout,7017,Operating,Sales
+2026-11-09,Elm Street Dental,2800,Operating,Invoice payment
+2026-11-10,QuickBooks,-90,Operating,Software
+2026-11-10,Transfer to Tax account,-3000,Operating,Transfer
+2026-11-11,Ferguson Supply,-2124,Operating,Materials
+2026-11-11,Harbor Cafe,1950,Operating,Invoice payment
+2026-11-12,Shell Fleet card,-471,Operating,Fuel
+2026-11-13,AMZN Mktp,-86,Operating,
+2026-11-15,Hartwell Insurance,-1150,Operating,Insurance
+2026-11-16,Square payout,6306,Operating,Sales
+2026-11-16,Home Depot,-212,Operating,
+2026-11-18,Ferguson Supply,-2349,Operating,Materials
+2026-11-19,Shell Fleet card,-406,Operating,Fuel
+2026-11-20,Gusto payroll,-17248,Operating,Payroll
+2026-11-20,Ally truck loan,-1380,Operating,Loan
+2026-11-22,Venmo,-60,Operating,
+2026-11-23,Square payout,6365,Operating,Sales
