@@ -502,6 +502,8 @@ A per-action-type **kill switch** turns off "on its own" actions instantly.
 ### Try it in the demo
 Click **Under the hood**, then **Run evals**. Rows 1–7 run as 10 cases through the same queries as the page and show pass or fail with the detail behind each result. Rows 8–9 are shown as "Not run here", because they need real outcomes or AI-written text.
 
+*Further reading that shaped this section:* [Why AI evals suddenly became a product skill](https://maryamaidini.substack.com/p/why-ai-evals-suddenly-became-a-product).
+
 ---
 
 ## 20. Roles and permissions
@@ -629,7 +631,7 @@ Sample data is generated in the page for a made-up company (Northside Plumbing C
 
 ## 26. AI note
 
-Built with Claude (demo code, SQL, write-up), used as a sparring partner. Guru made each decision himself: the problem and who it's for, the scope, the trust checks and their thresholds, the permission levels, and the platform design. He tested each one with Claude, which pushed back on gaps and weak spots, especially around what the AI agent can access, what needs the owner's approval, what it must never do, and what goes into the evals.
+Built with Claude (demo code, SQL, write-up), used as a sparring partner. Guru went through each decision himself: the problem and who it's for, the scope, the trust checks and their thresholds, the permission levels, and the platform design. He evaluated each one with Claude, which pushed back on gaps and weak spots before anything was kept.
 
 Every demo figure in this README was re-run in the demo. Rejected along the way: an AI-written forecast (can't be traced back to transactions) and auto-moving money (can't be safely undone).
 
