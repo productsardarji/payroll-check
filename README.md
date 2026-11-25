@@ -7,11 +7,11 @@ Built by Gursahib Suri for Relay's open call (Prompt 1: a problem a small busine
 | | |
 |---|---|
 | **Live demo** | `https://[guru-username].github.io/payroll-check` |
-| **Run it yourself** | Download this repo and serve the folder (see [Run it locally](#22-run-it-locally)) |
+| **Run it yourself** | Download this repo and serve the folder (see [Run it locally](#23-run-it-locally)) |
 | **Role of interest** | Senior Technical Product Manager, Data & AI (R&D pod) |
 | **Status** | Working prototype on sample data. Anything marked **(proposed)** is design, not built. |
 
-> **How to read this:** sections 1–6 are the product thinking. Sections 7–8 are the requirements and the step-by-step build. Sections 9–19 are the platform design. Section 21 is the background behind it.
+> **How to read this:** sections 1–6 are the product thinking. Sections 7–8 are the requirements and the step-by-step build. Sections 9–19 are the platform design. Sections 21–22 are the background behind it and what the project shows.
 
 ---
 
@@ -38,9 +38,10 @@ Built by Gursahib Suri for Relay's open call (Prompt 1: a problem a small busine
 19. [Roles and permissions](#19-roles-and-permissions)
 20. [Risks and dependencies](#20-risks-and-dependencies)
 21. [Background behind the design](#21-background-behind-the-design)
-22. [Run it locally](#22-run-it-locally)
-23. [How the demo works](#23-how-the-demo-works)
-24. [AI note](#24-ai-note)
+22. [What this project shows](#22-what-this-project-shows)
+23. [Run it locally](#23-run-it-locally)
+24. [How the demo works](#24-how-the-demo-works)
+25. [AI note](#25-ai-note)
 
 ---
 
@@ -229,16 +230,16 @@ See [Reliability](#11-reliability) for SLOs and [Roadmap as bets](#5-roadmap-as-
 
 ```mermaid
 flowchart LR
-  A[Relay ledger + invoices] -->|sync to device| B[DuckDB in the business's browser]
-  B --> C{Trust checks}
-  C -- fail --> X[No advice: show fixes]
-  C -- pass --> D[Regular payments + 30-day forecast]
-  D --> E[Actions with permission levels]
-  E --> F[Decision record]
-  F --> G[Owner approves / agent acts]
-  G --> H[Relay action APIs]
-  B -. totals + events only .-> S[(Snowflake, proposed)]
-  S -. defaults: e.g. typical lateness by industry .-> D
+  A["Relay ledger + invoices"] -->|sync to device| B["DuckDB in the business's browser"]
+  B --> C{"Trust checks"}
+  C -->|fail| X["No advice: show fixes"]
+  C -->|pass| D["Regular payments + 30-day forecast"]
+  D --> E["Actions with permission levels"]
+  E --> F["Decision record"]
+  F --> G["Owner approves or agent acts"]
+  G --> H["Relay action APIs"]
+  B -.->|totals and events only| S[("Snowflake (proposed)")]
+  S -.->|defaults such as typical lateness by industry| D
 ```
 
 **Split of work**
@@ -500,17 +501,35 @@ All proposed. The demo's **Owner view / Under the hood** toggle is a demo-only s
 
 ## 21. Background behind the design
 
-This design draws on platform work Gursahib (Guru) Suri has done before:
+This design draws on platform work Gursahib (Guru) Suri has done before, across consumer IoT and enterprise data and AI platforms:
 
-- **Agent permissions (TELUS SmartHome+):** set the rule that an AI agent can never do more than a person in that role could. Authorization by person/agent + device + action, with consent and audit logging adopted by other teams.
-- **Scoped identity for agents and integrations (TELUS):** verified identity plus scoped API tokens; calls without valid authorization rejected; every action traceable to identity and scope.
-- **Governed data access at scale (Dell Streaming Data Platform):** centralized access controls across 7 teams; sensitivity labels and lineage; self-service permissions replacing tickets; versioned APIs/SDKs with controlled deprecation; ~5 TB/day; ~99.5% uptime.
-- **Multi-tenant AI platform (Dell AI Factory):** multi-tenancy, usage-based billing and access controls for self-service model serving.
+- **Agent permissions:** set the rule that an AI agent can never do more than a person in that role could. Authorization by person/agent + device + action, with consent and audit logging adopted by other teams.
+- **Scoped identity for agents and integrations:** verified identity plus scoped API tokens; calls without valid authorization rejected; every action traceable to identity and scope.
+- **Governed data access at scale:** centralized access controls across 7 teams; sensitivity labels and lineage; self-service permissions replacing tickets; versioned APIs/SDKs with controlled deprecation; ~5 TB/day; ~99.5% uptime.
+- **Multi-tenant AI platform:** multi-tenancy, usage-based billing and access controls for self-service model serving.
 - **Evals:** golden datasets, LLM-as-a-judge, error analysis, and online monitoring (false-trigger rate, approval rates, latency).
 
 ---
 
-## 22. Run it locally
+## 22. What this project shows
+
+How the skills behind this project map to what Relay's open call asks for. Each row points to where you can check it in this repo.
+
+| Relay is looking for | Skill | Where to see it here |
+|---|---|---|
+| "See a problem and start building before anyone hands you a spec" | Product discovery, problem framing | [Problem space](#2-problem-space-the-what-and-the-why), and a working demo built from scratch (`index.html`) |
+| "No POC purgatory" | Taking a prototype to production with gates | [Roadmap as bets](#5-roadmap-as-bets), [Iterative solution](#8-iterative-solution-v0-to-v5) |
+| "Data trustworthy enough for an AI agent to act on it without a person checking first" | Data quality, data contracts, governance | The trust gate in the demo (Under the hood, then "Break the data"), [Data](#10-data) |
+| AI agents built on top of the data platforms | Agent permissions, autonomy levels, human approval | The three permission levels in the demo, [AI agents](#18-ai-agents), [Roles](#19-roles-and-permissions) |
+| Two platforms: Snowflake for Relay, DuckDB in each customer's browser | Platform architecture, privacy by design | 12 SQL queries running on DuckDB in the browser, [Platform architecture](#9-platform-architecture), [Privacy](#13-privacy) |
+| Production-grade thinking | Reliability, scalability, security, threat modeling | [Reliability](#11-reliability), [Scalability](#12-scalability), [Security](#14-security) |
+| Connecting to the rest of Relay and partners | APIs, MCP server, integrations | [APIs](#16-apis), [MCP server](#17-mcp-server), [Integrations](#15-integrations) |
+| Knowing whether it works | Metrics, guardrails, evals | [Roadmap as bets](#5-roadmap-as-bets), [PRD](#7-product-requirements-prd), [AI agents](#18-ai-agents) |
+| "Use AI if it helps" | Building with AI tools, with judgment | [AI note](#25-ai-note): what was kept, checked and rejected |
+
+---
+
+## 23. Run it locally
 
 The demo is a static site: no build step, no server code, no accounts.
 
@@ -540,7 +559,7 @@ sample/sample_transactions.csv  sample data for the "use your own CSV" feature
 
 ---
 
-## 23. How the demo works
+## 24. How the demo works
 
 Every change re-runs 12 SQL queries in the browser, in about 0.2 seconds:
 
@@ -563,8 +582,10 @@ Sample data is generated in the page for a made-up company (Northside Plumbing C
 
 ---
 
-## 24. AI note
+## 25. AI note
 
-Built with Claude (demo code, SQL, write-up). Every demo figure in this README was re-run in the demo. Rejected along the way: an AI-written forecast (can't be traced back to transactions) and auto-moving money (can't be safely undone).
+Built with Claude (demo code, SQL, write-up), used as a sparring partner. Guru went through each decision himself: the problem and who it's for, the scope, the trust checks and their thresholds, the permission levels, and the platform design. He evaluated each one with Claude, which pushed back on gaps and weak spots before anything was kept.
+
+Every demo figure in this README was re-run in the demo. Rejected along the way: an AI-written forecast (can't be traced back to transactions) and auto-moving money (can't be safely undone).
 
 *Sample data only. All names, businesses and amounts in the demo are invented.*
