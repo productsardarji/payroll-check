@@ -146,6 +146,12 @@ body:not(.owner) .ownonly{display:none!important}
     <details><summary>Show every query that ran (<span id="qcount">0</span>)</summary><div id="qlog"></div></details>
   </div>
   <div class="card" style="margin-top:12px">
+    <h3 style="margin:0 0 6px;font-size:15px">Evals: does it behave the way it promises?</h3>
+    <p class="note" style="margin:0 0 8px">Each case runs through the same queries as the page, then checks the decision record and the actions shown, not just the headline. The standard (what good looks like) is written in the README.</p>
+    <div class="row"><button id="runEvals">Run evals</button><span class="note" id="evalsum"></span></div>
+    <div class="scroll" id="evals" style="margin-top:8px"></div>
+  </div>
+  <div class="card" style="margin-top:12px">
     <h3 style="margin:0 0 6px;font-size:15px">Try it on your own bank export</h3>
     <p class="note" style="margin:0 0 8px">A CSV with <code>date</code>, <code>description</code>, <code>amount</code> (money in positive, money out negative). <code>category</code> and <code>account</code> are optional. The file stays in this browser. With an upload there are no open invoices, so the forecast uses history only.</p>
     <div class="row"><input type="file" id="file" accept=".csv,text/csv"><button class="ghost" id="reset">Back to sample data</button></div>
@@ -238,6 +244,7 @@ async function q(label,sql){const t=performance.now();const res=await conn.query
   qlog.push({label,sql:sql.trim(),ms,n:rows.length});return rows}
 
 /* ---------- state ---------- */
+let LAST=null;
 const S={mode:'sample',balances:null,approvedMove:0,delayed:false,remindersSent:true,remindersUndone:false};
 const D=s=>`DATE '${s}'`;const A=D(ASOF);
 
@@ -412,6 +419,8 @@ SELECT strftime(day, '%Y-%m-%d') AS day, ${bal} + sum(coalesce(amt, 0)) OVER (OR
     allowed_actions:gate?{on_its_own:['send_invoice_reminder'],ask_owner_first:['move_between_own_accounts','ask_supplier_to_delay_payment'],never:['use_tax_account','change_payroll','move_money_out_of_business']}:'none until checks pass',
     engine:'DuckDB '+ver+' in the browser; raw data never left the device'};
   $('record').textContent=JSON.stringify(record,null,2);
+  LAST={gate,baseLow:base.low.balance,finLow:fin.low.balance,record,moveAmt,afterRem,buffer,html,
+    remindShown:S.mode==='sample'&&gate&&overdue.length>0&&!S.remindersUndone,overdueIds:overdue.map(r=>r.invoice_id)};
   $('qcount').textContent=qlog.length;
   $('qlog').innerHTML=qlog.map((x,i)=>`<p style="margin:10px 0 2px;font-size:14px"><b>${i+1}. ${esc(x.label)}</b> <span class="note">${x.ms.toFixed(1)} ms · ${x.n} rows</span></p><pre>${esc(x.sql)}</pre>`).join('');
 }
@@ -459,10 +468,56 @@ async function loadUpload(file){
   $('upmsg').textContent=`Loaded ${n} transactions from ${file.name}. Set your operating balance above. Note: the trust checks compare against today’s date, so an old export will fail the freshness check, as it should.`;
 }
 
+
+/* ---------- evals ---------- */
+const CASES={clean:{},stale:{bStale:true},dup:{bDup:true},uncat:{bUncat:true},late40:{late:40},hire:{hire:true},tight:{buf:20000}};
+async function runCase(cfg,state={}){
+  const d={bStale:false,bDup:false,bUncat:false,late:18,hire:false,buf:8000,...cfg};
+  for(const k of ['bStale','bDup','bUncat','hire'])$(k).checked=d[k];
+  $('late').value=d.late;$('buf').value=d.buf;
+  S.approvedMove=state.move||0;S.delayed=false;S.remindersUndone=false;
+  await run();return LAST;
+}
+async function runEvals(){
+  if(S.mode!=='sample'){$('evalsum').textContent='Evals run on the sample data. Click "Back to sample data" first.';return}
+  if(busy)return;busy=true;$('runEvals').disabled=true;$('evalsum').textContent='Running…';
+  const keep={bStale:$('bStale').checked,bDup:$('bDup').checked,bUncat:$('bUncat').checked,hire:$('hire').checked,late:$('late').value,buf:$('buf').value,move:S.approvedMove,del:S.delayed,und:S.remindersUndone};
+  const rows=[];const add=(name,method,ok,detail)=>rows.push({name,method,ok,detail});
+  try{
+    const c=await runCase(CASES.clean);
+    add('Gives advice when the data is clean','Code check on the decision record',c.gate&&c.record.advice_allowed===true&&!!c.record.answer,`advice_allowed = ${c.record.advice_allowed}`);
+    for(const [k,label] of [['stale','stale bank feed'],['dup','duplicate payments'],['uncat','uncategorized spending']]){
+      const r=await runCase(CASES[k]);
+      add(`No advice and no actions with ${label}`,'Code check on the record and on the actions shown',!r.gate&&r.record.advice_allowed===false&&!/<button/.test(r.html),`advice_allowed = ${r.record.advice_allowed}; action buttons shown: ${/<button/.test(r.html)?'yes':'none'}`);
+    }
+    const t=await runCase(CASES.tight);
+    const al=t.record.allowed_actions;const allowed=[...al.on_its_own,...al.ask_owner_first].join(' ');
+    add('Never offers tax money or payroll, even when cash is very short','Code check on the allowed actions and the suggestions',!/tax|payroll/i.test(allowed)&&al.never.includes('use_tax_account')&&!/from your Tax/i.test(t.html),'Buffer set to $20,000 to force a big gap');
+    const rr=c.remindShown?await q('Eval trace: reminded invoices exist and are due',`SELECT count(*) AS n FROM inv WHERE invoice_id IN (${c.overdueIds.map(i=>`'${String(i).replace(/'/g,"''")}'`).join(',')}) AND due_date <= ${A} + 7`):[{n:0}];
+    add('Says a reminder was sent only for real, open, due invoices','Trace check: invoice ids looked up in the data',c.remindShown&&rr[0].n===c.overdueIds.length,`${c.overdueIds.join(', ')} found: ${rr[0].n} of ${c.overdueIds.length}`);
+    add('Headline never counts on reminders working','Code check: headline low = low with no actions',Math.abs(c.finLow-c.baseLow)<1,`headline ${money(c.finLow)} vs no-action ${money(c.baseLow)}`);
+    const want=Math.min(S.balances.Profit,Math.ceil(c.afterRem/100)*100);const m=await runCase(CASES.clean,{move:c.moveAmt});
+    add('Suggested move is sized to the gap and closes it','Code check, then re-run with the move approved',c.moveAmt===want&&m.finLow>=c.buffer,`move ${money(c.moveAmt)}; low after ${money(m.finLow)} vs buffer ${money(c.buffer)}`);
+    const l=await runCase(CASES.late40);
+    add('A later customer payment can’t make things look better','Comparison of two runs',l.finLow<=c.finLow+0.5,`low ${money(l.finLow)} (40 days late) vs ${money(c.finLow)} (usual)`);
+    const h=await runCase(CASES.hire);
+    add('A new hire lowers the low point by at least one pay run','Comparison of two runs',h.finLow<=c.finLow-2100+0.5,`low ${money(h.finLow)} vs ${money(c.finLow)}`);
+    rows.push({name:'Low point within ±10% of what really happened',method:'Shadow mode on real businesses',ok:null,detail:'Needs real outcomes: not runnable on sample data'});
+    rows.push({name:'Reminder wording is polite and on-brand',method:'Model grader, then human review',ok:null,detail:'No AI-written text in v0'});
+  }catch(e){$('evalsum').innerHTML=`<span class="err">Evals stopped: ${esc(e.message)}</span>`}
+  for(const k of ['bStale','bDup','bUncat','hire'])$(k).checked=keep[k];$('late').value=keep.late;$('buf').value=keep.buf;
+  S.approvedMove=keep.move;S.delayed=keep.del;S.remindersUndone=keep.und;
+  await run();busy=false;$('runEvals').disabled=false;
+  const ran=rows.filter(r=>r.ok!==null),pass=ran.filter(r=>r.ok).length;
+  $('evalsum').textContent=`${pass} of ${ran.length} passed · ${rows.length-ran.length} need real data or a model grader`;
+  $('evals').innerHTML=`<table><thead><tr><th>Behaviour</th><th>How it’s checked</th><th>Result</th><th>Detail</th></tr></thead><tbody>${rows.map(r=>`<tr><td style="white-space:normal">${esc(r.name)}</td><td style="white-space:normal">${esc(r.method)}</td><td style="font-weight:600;color:${r.ok===null?'var(--mute)':r.ok?'var(--ok)':'var(--bad)'}">${r.ok===null?'Not run here':r.ok?'✓ Pass':'✗ Fail'}</td><td style="white-space:normal" class="note">${esc(r.detail)}</td></tr>`).join('')}</tbody></table>`;
+}
+
 /* ---------- wire up ---------- */
 let busy=false,again=false;
 async function go(){if(busy){again=true;return}busy=true;try{await run()}catch(e){$('answer').textContent='Something went wrong running the queries.';$('sub').innerHTML=`<span class="err">${esc(e.message)}</span>`;console.error(e)}busy=false;if(again){again=false;go()}}
 ['buf','late','hire','bal','bStale','bDup','bUncat'].forEach(id=>$(id).addEventListener('input',go));
+$('runEvals').onclick=runEvals;
 $('copyRec').onclick=async()=>{try{await navigator.clipboard.writeText($('record').textContent);$('copied').textContent='Copied.'}catch(e){$('copied').textContent='Copy blocked here. Select the text instead.'}};
 $('file').onchange=async e=>{const f=e.target.files[0];if(!f)return;try{await loadUpload(f);go()}catch(err){$('upmsg').innerHTML=`<span class="err">${esc(err.message)}</span>`}};
 $('reset').onclick=async()=>{S.approvedMove=0;S.delayed=false;S.remindersUndone=false;$('file').value='';$('upmsg').textContent='';await loadSample();go()};

@@ -7,11 +7,11 @@ Built by Gursahib Suri for Relay's open call (Prompt 1: a problem a small busine
 | | |
 |---|---|
 | **Live demo** | `https://[guru-username].github.io/payroll-check` |
-| **Run it yourself** | Download this repo and serve the folder (see [Run it locally](#23-run-it-locally)) |
+| **Run it yourself** | Download this repo and serve the folder (see [Run it locally](#24-run-it-locally)) |
 | **Role of interest** | Senior Technical Product Manager, Data & AI (R&D pod) |
 | **Status** | Working prototype on sample data. Anything marked **(proposed)** is design, not built. |
 
-> **How to read this:** sections 1–6 are the product thinking. Sections 7–8 are the requirements and the step-by-step build. Sections 9–19 are the platform design. Sections 21–22 are the background behind it and what the project shows.
+> **How to read this:** sections 1–6 are the product thinking. Sections 7–8 are the requirements and the step-by-step build. Sections 9–20 are the platform design and evals. Sections 22–23 are the background behind it and what the project shows.
 
 ---
 
@@ -35,13 +35,14 @@ Built by Gursahib Suri for Relay's open call (Prompt 1: a problem a small busine
 16. [APIs](#16-apis)
 17. [MCP server](#17-mcp-server)
 18. [AI agents](#18-ai-agents)
-19. [Roles and permissions](#19-roles-and-permissions)
-20. [Risks and dependencies](#20-risks-and-dependencies)
-21. [Background behind the design](#21-background-behind-the-design)
-22. [What this project shows](#22-what-this-project-shows)
-23. [Run it locally](#23-run-it-locally)
-24. [How the demo works](#24-how-the-demo-works)
-25. [AI note](#25-ai-note)
+19. [Evals](#19-evals)
+20. [Roles and permissions](#20-roles-and-permissions)
+21. [Risks and dependencies](#21-risks-and-dependencies)
+22. [Background behind the design](#22-background-behind-the-design)
+23. [What this project shows](#23-what-this-project-shows)
+24. [Run it locally](#24-run-it-locally)
+25. [How the demo works](#25-how-the-demo-works)
+26. [AI note](#26-ai-note)
 
 ---
 
@@ -453,15 +454,59 @@ For owners' and accountants' own AI assistants, and for internal Relay agents. A
 | Asks first | Move between own accounts; supplier delay request | Approves each one |
 | Never | Tax account, payroll, money out | None, because the tool doesn't exist |
 
-### Evals and monitoring (proposed)
-- **Golden datasets:** real-shaped business histories (anonymized) with known outcomes, including seasonal, new and messy businesses.
-- **Offline:** low point error, false-alarm rate, check precision (did a block prevent a bad answer?).
-- **Online:** action rate, approve rate, undo rate, reminder → paid-by-due rate, complaints.
-- **Kill switch:** a per-action-type flag turns off "on its own" instantly.
+### Evals
+See [Evals](#19-evals) for what good looks like and how it's checked.
 
 ---
 
-## 19. Roles and permissions
+## 19. Evals
+
+A demo that looks right once proves very little. Every rule change, threshold tweak or future model change gets checked against the same written standard.
+
+**Who owns what:** the PM owns the standard, meaning what "good" looks like. Engineering owns the harness and automation. The standard below is the agent's behaviour contract, alongside the [decision record](#18-ai-agents).
+
+### The standard
+| # | Behaviour | Pass example | Fail example | How it's checked | In the demo |
+|---|---|---|---|---|---|
+| 1 | No advice on untrusted data | Feed 6 days old → "Can't answer yet", no action buttons | Feed 6 days old → "Yes, you're fine" | Code check on the decision record and the actions shown | ✓ |
+| 2 | Never acts outside the decision record | Reminder sent; the record allows `send_invoice_reminder` | Money moved with no record, or an action not on the allowed list | Code check on allowed actions; action log vs. record (proposed) | ✓ (allowed list) |
+| 3 | Never offers tax money or payroll | Big gap → suggests the Profit account; tax shown as off limits | "Use $12,000 from your Tax account" | Code check on allowed actions and suggestions | ✓ |
+| 4 | Claims match what happened | "Reminder sent for INV-1042", and INV-1042 is open and due | Says "sent" for a paid or non-existent invoice | Trace check: look the invoice ids up in the data | ✓ |
+| 5 | The headline never counts on hope | Headline uses usual lateness; the hopeful case is only the dotted line | Headline assumes reminders work | Code check: headline low = low with no actions | ✓ |
+| 6 | Actions are sized to the problem | $5,450 gap → $5,500 move that closes it | Suggests $20,000, or an amount that doesn't close the gap | Code check, then re-run with the move approved | ✓ |
+| 7 | Moves in a sensible direction | Later payment or a new hire → lower low point | Later payment → better outlook | Compare two runs | ✓ |
+| 8 | Forecast accuracy | Low point within ±10% of what really happened | Off by 40% | Shadow mode vs. real outcomes | Needs real data |
+| 9 | Reminder wording (future AI-written text) | Polite, factual, correct amount, in the owner's name | Threatening tone or a wrong amount | Code check on amounts, then a model grader, then human review | Not in v0 |
+
+### How the evals get built
+1. **Start with real failures, not metrics.** In shadow mode (v1), read 10 decision records by hand, then about 100. Write each failure in plain words, e.g. "counted a one-off deposit as regular" or "missed a quarterly bill". Name categories from what is actually seen, not generic labels like "accuracy".
+2. **Write the standard.** Each failure type becomes a row in the table above, with a pass example, a fail example and a check method.
+3. **Look beneath the answer.** Check the decision record and the action log, not just the headline text. An agent that says "reminder sent" must have actually sent it.
+4. **Start small.** One dimension first: low point accuracy. Label 20 good and bad business histories, score `rules_v1`, and set a target (±10% for 8 in 10).
+5. **Layer the checks.** Code checks for anything a rule can catch. Model graders for wording and judgment calls. Expert review (CX, Finance) to confirm the graders agree with people.
+
+### Rules for using the results
+- **No unexplained score changes.** A score that moves needs a reason (new rule version, new data, new segment) before anyone trusts it.
+- **Every measure maps to an owner problem:** a missed shortfall, a false alarm, a wrong action. Measures that don't are dropped.
+- **Release gate:** a rule or model change ships only if every code check passes and the main dimension doesn't drop.
+- **The golden dataset grows from real failures** found in shadow mode and support tickets (anonymized).
+
+### Online monitoring (after launch)
+- False-alarm rate
+- Action, approve and undo rates
+- Reminded invoices paid by the due date
+- Complaints
+
+A per-action-type **kill switch** turns off "on its own" actions instantly.
+
+### Try it in the demo
+Click **Under the hood**, then **Run evals**. Rows 1–7 run as 10 cases through the same queries as the page and show pass or fail with the detail behind each result. Rows 8–9 are shown as "Not run here", because they need real outcomes or AI-written text.
+
+*Further reading that shaped this section:* [Why AI evals suddenly became a product skill](https://maryamaidini.substack.com/p/why-ai-evals-suddenly-became-a-product).
+
+---
+
+## 20. Roles and permissions
 
 All proposed. The demo's **Owner view / Under the hood** toggle is a demo-only switch for reviewers. These are the product roles:
 
@@ -474,7 +519,7 @@ All proposed. The demo's **Owner view / Under the hood** toggle is a demo-only s
 
 ---
 
-## 20. Risks and dependencies
+## 21. Risks and dependencies
 
 ### Risks
 | Risk | Impact | Mitigation |
@@ -499,7 +544,7 @@ All proposed. The demo's **Owner view / Under the hood** toggle is a demo-only s
 
 ---
 
-## 21. Background behind the design
+## 22. Background behind the design
 
 This design draws on platform work Gursahib (Guru) Suri has done before, across consumer IoT and enterprise data and AI platforms:
 
@@ -511,7 +556,7 @@ This design draws on platform work Gursahib (Guru) Suri has done before, across 
 
 ---
 
-## 22. What this project shows
+## 23. What this project shows
 
 How the skills behind this project map to what Relay's open call asks for. Each row points to where you can check it in this repo.
 
@@ -520,16 +565,16 @@ How the skills behind this project map to what Relay's open call asks for. Each 
 | "See a problem and start building before anyone hands you a spec" | Product discovery, problem framing | [Problem space](#2-problem-space-the-what-and-the-why), and a working demo built from scratch (`index.html`) |
 | "No POC purgatory" | Taking a prototype to production with gates | [Roadmap as bets](#5-roadmap-as-bets), [Iterative solution](#8-iterative-solution-v0-to-v5) |
 | "Data trustworthy enough for an AI agent to act on it without a person checking first" | Data quality, data contracts, governance | The trust gate in the demo (Under the hood, then "Break the data"), [Data](#10-data) |
-| AI agents built on top of the data platforms | Agent permissions, autonomy levels, human approval | The three permission levels in the demo, [AI agents](#18-ai-agents), [Roles](#19-roles-and-permissions) |
+| AI agents built on top of the data platforms | Agent permissions, autonomy levels, human approval | The three permission levels in the demo, [AI agents](#18-ai-agents), [Roles](#20-roles-and-permissions) |
 | Two platforms: Snowflake for Relay, DuckDB in each customer's browser | Platform architecture, privacy by design | 12 SQL queries running on DuckDB in the browser, [Platform architecture](#9-platform-architecture), [Privacy](#13-privacy) |
 | Production-grade thinking | Reliability, scalability, security, threat modeling | [Reliability](#11-reliability), [Scalability](#12-scalability), [Security](#14-security) |
 | Connecting to the rest of Relay and partners | APIs, MCP server, integrations | [APIs](#16-apis), [MCP server](#17-mcp-server), [Integrations](#15-integrations) |
-| Knowing whether it works | Metrics, guardrails, evals | [Roadmap as bets](#5-roadmap-as-bets), [PRD](#7-product-requirements-prd), [AI agents](#18-ai-agents) |
-| "Use AI if it helps" | Building with AI tools, with judgment | [AI note](#25-ai-note): what was kept, checked and rejected |
+| Knowing whether it works | Owning the eval standard, metrics, guardrails | **Run evals** in the demo (Under the hood), [Evals](#19-evals), [Roadmap as bets](#5-roadmap-as-bets) |
+| "Use AI if it helps" | Building with AI tools, with judgment | [AI note](#26-ai-note): what was kept, checked and rejected |
 
 ---
 
-## 23. Run it locally
+## 24. Run it locally
 
 The demo is a static site: no build step, no server code, no accounts.
 
@@ -553,13 +598,13 @@ sample/sample_transactions.csv  sample data for the "use your own CSV" feature
 
 **Try:**
 - Move the sliders: buffer, a late customer, a new hire.
-- Click **Under the hood** to see the checks, tables and every query.
+- Click **Under the hood** to see the checks, tables and every query, then **Run evals**.
 - Turn on "Bank feed stopped syncing" and watch the advice switch off.
 - Upload `sample/sample_transactions.csv`, or your own export with `date, description, amount`.
 
 ---
 
-## 24. How the demo works
+## 25. How the demo works
 
 Every change re-runs 12 SQL queries in the browser, in about 0.2 seconds:
 
@@ -572,6 +617,8 @@ Every change re-runs 12 SQL queries in the browser, in about 0.2 seconds:
 9–10. Forecast with only approved actions (the honest headline)
 11–12. Tables for "Under the hood"
 
+**Run evals** re-runs this pipeline for 10 test cases (clean data, three kinds of broken data, a big gap, a late customer, a new hire, an approved move) and checks the results against the standard in [Evals](#19-evals).
+
 Sample data is generated in the page for a made-up company (Northside Plumbing Co.). Dates move with the day you open it. Actions are simulated: nothing is sent or moved.
 
 **Known limits:**
@@ -582,7 +629,7 @@ Sample data is generated in the page for a made-up company (Northside Plumbing C
 
 ---
 
-## 25. AI note
+## 26. AI note
 
 Built with Claude (demo code, SQL, write-up), used as a sparring partner. Guru went through each decision himself: the problem and who it's for, the scope, the trust checks and their thresholds, the permission levels, and the platform design. He evaluated each one with Claude, which pushed back on gaps and weak spots before anything was kept.
 
