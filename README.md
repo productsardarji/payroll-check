@@ -7,11 +7,11 @@ Built by Gursahib Suri for Relay's open call (Prompt 1: a problem a small busine
 | | |
 |---|---|
 | **Live demo** | `https://[guru-username].github.io/payroll-check` |
-| **Run it yourself** | Download this repo and serve the folder (see [Run it locally](#24-run-it-locally)) |
+| **Run it yourself** | Download this repo and serve the folder (see [Run it locally](#25-run-it-locally)) |
 | **Role of interest** | Senior Technical Product Manager, Data & AI (R&D pod) |
 | **Status** | Working prototype on sample data. Anything marked **(proposed)** is design, not built. |
 
-> **How to read this:** sections 1–6 are the product thinking. Sections 7–8 are the requirements and the step-by-step build. Sections 9–20 are the platform design and evals. Sections 22–23 are the background behind it and what the project shows.
+> **How to read this:** sections 1–7 are the product thinking, starting with the people it's for (section 3). Sections 8–9 are the requirements and the step-by-step build. Sections 10–22 are the platform design and evals. Sections 23–24 are the background behind it and what the project shows.
 
 ---
 
@@ -19,30 +19,31 @@ Built by Gursahib Suri for Relay's open call (Prompt 1: a problem a small busine
 
 1. [TL;DR](#1-tldr)
 2. [Problem space: the what and the why](#2-problem-space-the-what-and-the-why)
-3. [Solution space: options and the choice](#3-solution-space-options-and-the-choice)
-4. [Product strategy](#4-product-strategy)
-5. [Roadmap as bets](#5-roadmap-as-bets)
-6. [Assumptions](#6-assumptions)
-7. [Product requirements (PRD)](#7-product-requirements-prd)
-8. [Iterative solution: v0 to v5](#8-iterative-solution-v0-to-v5)
-9. [Platform architecture](#9-platform-architecture)
-10. [Data](#10-data)
-11. [Reliability](#11-reliability)
-12. [Scalability](#12-scalability)
-13. [Privacy](#13-privacy)
-14. [Security](#14-security)
-15. [Integrations](#15-integrations)
-16. [APIs](#16-apis)
-17. [MCP server](#17-mcp-server)
-18. [AI agents](#18-ai-agents)
-19. [Evals](#19-evals)
-20. [Roles and permissions](#20-roles-and-permissions)
-21. [Risks and dependencies](#21-risks-and-dependencies)
-22. [Background behind the design](#22-background-behind-the-design)
-23. [What this project shows](#23-what-this-project-shows)
-24. [Run it locally](#24-run-it-locally)
-25. [How the demo works](#25-how-the-demo-works)
-26. [AI note](#26-ai-note)
+3. [Personas and journeys](#3-personas-and-journeys)
+4. [Solution space: options and the choice](#4-solution-space-options-and-the-choice)
+5. [Product strategy](#5-product-strategy)
+6. [Roadmap as bets](#6-roadmap-as-bets)
+7. [Assumptions](#7-assumptions)
+8. [Product requirements (PRD)](#8-product-requirements-prd)
+9. [Iterative solution: v0 to v5](#9-iterative-solution-v0-to-v5)
+10. [Platform architecture](#10-platform-architecture)
+11. [Data](#11-data)
+12. [Reliability](#12-reliability)
+13. [Scalability](#13-scalability)
+14. [Privacy](#14-privacy)
+15. [Security](#15-security)
+16. [Integrations](#16-integrations)
+17. [APIs](#17-apis)
+18. [MCP server](#18-mcp-server)
+19. [AI agents](#19-ai-agents)
+20. [Evals](#20-evals)
+21. [Roles and permissions](#21-roles-and-permissions)
+22. [Risks and dependencies](#22-risks-and-dependencies)
+23. [Background behind the design](#23-background-behind-the-design)
+24. [What this project shows](#24-what-this-project-shows)
+25. [Run it locally](#25-run-it-locally)
+26. [How the demo works](#26-how-the-demo-works)
+27. [AI note](#27-ai-note)
 
 ---
 
@@ -80,7 +81,7 @@ The owner's real question isn't "what's my balance?" It's:
 - Relay already offers Cash Insights and forecasts on paid plans. The gap this targets is **trust and action**, not another chart.
 
 ### Who first
-**Assumption:** service businesses with about 8 staff, biweekly payroll, and commercial clients on net terms (plumbing, cleaning, HVAC, agencies). Their cash swings are big, timing-driven and predictable from history.
+**Assumption:** service businesses with about 8 staff, biweekly payroll, and commercial clients on net terms (plumbing, cleaning, HVAC, agencies). Their cash swings are big, timing-driven and predictable from history. The demo's business, Northside Plumbing, is one of these. Its owner and the two people around him are the personas in [section 3](#3-personas-and-journeys).
 
 ### Jobs to be done
 1. "Tell me **early** if I'm going to be short."
@@ -92,7 +93,55 @@ A spreadsheet updated by hand, gut feel, an accountant once a month, or overdraf
 
 ---
 
-## 3. Solution space: options and the choice
+## 3. Personas and journeys
+
+Cash decisions in a small business aren't made by one person. The owner decides, a bookkeeper keeps the data clean, and someone in the office does the legwork. The demo walks through all three as guided journeys (pick them at the top of the page). Names and the business are invented.
+
+### Sam, owner of Northside Plumbing
+| | |
+|---|---|
+| **Who** | Runs an 8-person plumbing company. Checks the Relay app on his phone before the first job. |
+| **Wants** | To know, without digging, whether payroll will clear on Friday. |
+| **Pain today** | The balance looks fine on Monday; then payroll leaves before the big clients pay. He finds out too late. |
+| **Journey in the demo** | 1. A morning nudge on his lock screen → 2. One plain answer and the date that matters → 3. Why, in his terms (payroll, rent, the two clients who pay late) → 4. What happens next: *done for you* (reminders sent, can undo), *needs you* (approve moving $5,500 from Profit), *off-limits* (Tax savings) → 5. "You're covered" |
+| **Done looks like** | He approves one thing in under a minute and stops worrying. |
+| **Can / can't** | Approves or declines money moves, undoes reminders, sets his cushion. Can't use the tax account; nobody can. |
+
+### Alex, outside bookkeeper
+| | |
+|---|---|
+| **Who** | Keeps the books for Northside and about 30 other small businesses. |
+| **Wants** | Clean books, so owners' tools give the right answers and nobody calls in a panic. |
+| **Pain today** | Messy bank imports (duplicates, uncategorized spending) quietly make every report wrong. |
+| **Journey in the demo** | 1. Brings in today's import, and Sam's phone switches to "Paused while your books are checked" → 2. Fixes each flagged problem with one click; the checks re-run after each fix → 3. Hands back to Sam: his answer is back |
+| **Done looks like** | Every data check passes, and Sam's answer is unlocked. |
+| **Can / can't** | Fixes the books. Can't take any money action. |
+
+### Jordan, office manager (team member)
+| | |
+|---|---|
+| **Who** | Handles bills and scheduling for Sam. |
+| **Wants** | To get ahead of a cash gap without bothering Sam more than needed. |
+| **Pain today** | Sees the problem coming but has to chase Sam by text to move money. |
+| **Journey in the demo** | 1. Sees the same answer and reasons as Sam → 2. Prepares the $5,500 move; "Approve it myself" and "Use Tax savings" are greyed out, with the reason shown → 3. Hands off: the request lands on Sam's phone as "Prepared by Jordan" |
+| **Done looks like** | The fix is ready, and Sam only has to tap Approve. |
+| **Can / can't** | Prepares money moves. Can't approve them (unless Sam delegates, proposed), and can't use tax money. |
+
+### How the journeys connect
+- **Alex → Sam:** a messy import pauses Sam's advice, and fixing it brings the answer back. This is the trust gate as a real workflow.
+- **Jordan → Sam:** Jordan's prepared move shows up on Sam's phone with Jordan's name on it.
+- **Sam → everyone:** Sam's approval changes the answer for all three, from "tight" to "You're covered".
+
+### Under the hood: for the Relay review team
+The **Under the hood** view at the top of the demo isn't a persona. It's for the Relay team reviewing this submission. It shows everything behind the journeys:
+- the sliders: cushion, a late customer, a new hire
+- the "break the data" switches
+- the data checks, tables, decision record and every query
+- **Run evals**, and the CSV upload
+
+---
+
+## 4. Solution space: options and the choice
 
 | Option | Upside | Downside | Verdict |
 |---|---|---|---|
@@ -110,34 +159,34 @@ A spreadsheet updated by hand, gut feel, an accountant once a month, or overdraf
 
 ---
 
-## 4. Product strategy
+## 5. Product strategy
 
 - **Vision:** every Relay owner knows, every morning, whether the next 30 days are safe, and has the boring fixes already handled.
 - **Wedge:** one question (payroll) for one segment (service businesses with payroll and invoices).
 - **Why Relay wins here:** Relay already holds the ledger, multiple accounts (Profit First style), invoicing and bill pay. A bank sees the timing that accounting tools see late.
-- **Platform play:** the trust checks and the **decision record** (section 18) become a shared layer that every Relay agent uses before it acts: collections, bill pay, savings sweeps. This is the long-term value, beyond one feature.
+- **Platform play:** the trust checks and the **decision record** (section 19) become a shared layer that every Relay agent uses before it acts: collections, bill pay, savings sweeps. This is the long-term value, beyond one feature.
 - **Business impact (hypotheses):** fewer overdrafts and surprise shortfalls; faster collections (reminders); higher Scale-plan conversion and retention for owners who see the value; fewer "where did my money go?" support tickets.
 
 ---
 
-## 5. Roadmap as bets
+## 6. Roadmap as bets
 
 Each bet has a hypothesis, the signal that proves it, and a point to stop.
 
-| # | Bet | Hypothesis | Signal it's working | Kill or change if |
-|---|---|---|---|---|
-| B1 | **Trust before insight** | Owners act more on a traceable answer than on a smarter black box | Gaps flagged 7+ days ahead get acted on (target 40% in beta, proposed) | Under 15% acted on after 4 weeks |
-| B2 | **Simple rules are good enough for v1** | Gap-based rules predict the 30-day low point well for this segment | Low point within ±10% for 8 in 10 businesses in shadow mode | Under 6 in 10, then add seasonality or ML before showing |
-| B3 | **Reminders move cash** | A timely reminder gets overdue invoices paid sooner | Reminded invoices paid by due date: +15 points vs. control (A/B) | No lift, or complaints from the owner's clients |
-| B4 | **Owners will approve suggested moves** | One-tap "move from Profit to Operating" is welcome | Approve rate over 30%, undo under 10% | Approve rate under 10%, or confusion in CX tickets |
-| B5 | **The trust layer is reusable** | Other agents (collections, bill pay) adopt the checks and decision record | 2+ other Relay agents use it within 2 quarters | Each team rebuilds its own checks |
-| B6 | **Partners want it via MCP** | Accountants' and owners' own AI tools want safe, scoped access | Partner pilot with read-only tools; zero out-of-scope calls | Low use, or security review blocks it |
+| # | Bet | For | Hypothesis | Signal it's working | Kill or change if |
+|---|---|---|---|---|---|
+| B1 | **Trust before insight** | Sam | Owners act more on a traceable answer than on a smarter black box | Gaps flagged 7+ days ahead get acted on (target 40% in beta, proposed) | Under 15% acted on after 4 weeks |
+| B2 | **Simple rules are good enough for v1** | Sam | Gap-based rules predict the 30-day low point well for this segment | Low point within ±10% for 8 in 10 businesses in shadow mode | Under 6 in 10, then add seasonality or ML before showing |
+| B3 | **Reminders move cash** | Sam | A timely reminder gets overdue invoices paid sooner | Reminded invoices paid by due date: +15 points vs. control (A/B) | No lift, or complaints from the owner's clients |
+| B4 | **Owners will approve suggested moves** | Sam, Jordan | One-tap "move from Profit to Operating" is welcome | Approve rate over 30%, undo under 10% | Approve rate under 10%, or confusion in CX tickets |
+| B5 | **The trust layer is reusable** | Relay (other agents) | Other agents (collections, bill pay) adopt the checks and decision record | 2+ other Relay agents use it within 2 quarters | Each team rebuilds its own checks |
+| B6 | **Partners want it via MCP** | Alex, Sam (their own AI tools) | Accountants' and owners' own AI tools want safe, scoped access | Partner pilot with read-only tools; zero out-of-scope calls | Low use, or security review blocks it |
 
 **Now (weeks 1–8):** B1, B2, B3, B4. **Next (quarter 2):** B5. **Later:** B6.
 
 ---
 
-## 6. Assumptions
+## 7. Assumptions
 
 All labeled, and each with a way to test it.
 
@@ -153,7 +202,7 @@ All labeled, and each with a way to test it.
 
 ---
 
-## 7. Product requirements (PRD)
+## 8. Product requirements (PRD)
 
 ### Goals
 1. Tell the owner, in one sentence, whether the next 30 days are safe.
@@ -164,18 +213,30 @@ All labeled, and each with a way to test it.
 Lending or credit offers · moving money without approval · a new ML forecasting model · tax advice · changes to payroll.
 
 ### Users
-- **Owner:** decides and approves. Low time, high stakes.
-- **Admin or team member:** views and prepares, approves only if delegated.
-- **Accountant or bookkeeper:** fixes categories and duplicates, read-only on money.
-- **Agent:** acts only within the decision record (section 18).
+See [Personas and journeys](#3-personas-and-journeys) for the full picture.
+- **Sam, owner:** decides and approves. Low time, high stakes.
+- **Alex, bookkeeper:** fixes categories and duplicates; no money actions.
+- **Jordan, team member:** views and prepares; approves only if delegated.
+- **Agent:** acts only within the decision record (section 19).
 
 ### User stories
-- As an owner, I see "Yes / Yes, but tight / No" and the date of my lowest balance, so I know whether to worry.
-- As an owner, I see why: the payments and invoices that cause the dip.
-- As an owner, I'm told when the data can't be trusted and what to fix, instead of a wrong answer.
-- As an owner, safe reminders go out on my behalf and I can undo them.
-- As an owner, I approve or decline a suggested money move in one tap.
-- As an accountant, I see which checks failed so I can fix the books.
+**Sam, owner**
+- I get a nudge only when something needs me, not a dashboard to check.
+- I see "Yes / Yes, but tight / No" and the date of my lowest balance, so I know whether to worry.
+- I see why, in my terms: my payroll, my rent, my clients who pay late.
+- I'm told when the data can't be trusted, instead of getting a wrong answer.
+- Safe reminders go out on my behalf, and I can undo them.
+- I approve or decline a suggested money move in one tap, and see who prepared it.
+
+**Alex, bookkeeper**
+- I see exactly which checks failed and the rows behind each one.
+- I fix each problem in one step, and the checks re-run right away.
+- I can see when my fixes have unlocked the owner's answer.
+
+**Jordan, team member**
+- I see the same answer and reasons as the owner.
+- I can prepare a money move for the owner's approval.
+- I can't approve it myself or touch tax money, and the screen tells me why.
 
 ### Functional requirements
 | ID | Requirement |
@@ -206,7 +267,7 @@ Lending or credit offers · moving money without approval · a new ML forecastin
 - **Given** the owner taps Undo on a reminder, **then** the reminder is cancelled and logged as undone.
 
 ### Success metrics
-See [Reliability](#11-reliability) for SLOs and [Roadmap as bets](#5-roadmap-as-bets) for product signals.
+See [Reliability](#12-reliability) for SLOs and [Roadmap as bets](#6-roadmap-as-bets) for product signals.
 
 **Guardrails:**
 - Undo rate under 10%
@@ -215,7 +276,7 @@ See [Reliability](#11-reliability) for SLOs and [Roadmap as bets](#5-roadmap-as-
 
 ---
 
-## 8. Iterative solution: v0 to v5
+## 9. Iterative solution: v0 to v5
 
 | Version | What it is | Gate to the next |
 |---|---|---|
@@ -228,7 +289,7 @@ See [Reliability](#11-reliability) for SLOs and [Roadmap as bets](#5-roadmap-as-
 
 ---
 
-## 9. Platform architecture
+## 10. Platform architecture
 
 ```mermaid
 flowchart LR
@@ -253,7 +314,7 @@ flowchart LR
 
 ---
 
-## 10. Data
+## 11. Data
 
 ### Data model (in the browser)
 | Table | Grain | Key columns |
@@ -287,7 +348,7 @@ Only **aggregates and events**, never raw transactions:
 
 ---
 
-## 11. Reliability
+## 12. Reliability
 
 ### SLOs (proposed)
 | SLO | Target |
@@ -311,7 +372,7 @@ Each decision record includes the rules version, check results and timings. Dash
 
 ---
 
-## 12. Scalability
+## 13. Scalability
 
 - **Compute scales with customers for free:** each business runs its own engine in its own browser. Relay's servers don't do the per-business math.
 - **Browser limits:** a typical small business has a few thousand transactions a year, which is small for DuckDB. For long histories, older months roll up into monthly totals, and data loads as compressed **Parquet** snapshots, with daily changes added on top.
@@ -321,7 +382,7 @@ Each decision record includes the rules version, check results and timings. Dash
 
 ---
 
-## 13. Privacy
+## 14. Privacy
 
 - **Data minimization:** raw transactions stay on the device for this feature. Only aggregates and events leave it.
 - **Small-group suppression:** no aggregate is published for groups below a minimum size.
@@ -333,7 +394,7 @@ Each decision record includes the rules version, check results and timings. Dash
 
 ---
 
-## 14. Security
+## 15. Security
 
 ### Threat model (main items)
 | Threat | Mitigation |
@@ -348,7 +409,7 @@ Each decision record includes the rules version, check results and timings. Dash
 
 ---
 
-## 15. Integrations
+## 16. Integrations
 
 | System | Use | Status |
 |---|---|---|
@@ -362,7 +423,7 @@ Each decision record includes the rules version, check results and timings. Dash
 
 ---
 
-## 16. APIs
+## 17. APIs
 
 All proposed. REST, versioned under `/v1`.
 
@@ -399,7 +460,7 @@ Content-Type: application/json
 
 ---
 
-## 17. MCP server
+## 18. MCP server
 
 For owners' and accountants' own AI assistants, and for internal Relay agents. All proposed.
 
@@ -422,7 +483,7 @@ For owners' and accountants' own AI assistants, and for internal Relay agents. A
 
 ---
 
-## 18. AI agents
+## 19. AI agents
 
 ### Where AI fits, and where it doesn't
 | Job | Who does it | Why |
@@ -456,15 +517,15 @@ For owners' and accountants' own AI assistants, and for internal Relay agents. A
 | Never | Tax account, payroll, money out | None, because the tool doesn't exist |
 
 ### Evals
-See [Evals](#19-evals) for what good looks like and how it's checked.
+See [Evals](#20-evals) for what good looks like and how it's checked.
 
 ---
 
-## 19. Evals
+## 20. Evals
 
 A demo that looks right once proves very little. Every rule change, threshold tweak or future model change gets checked against the same written standard.
 
-**Who owns what:** the PM owns the standard, meaning what "good" looks like. Engineering owns the harness and automation. The standard below is the agent's behaviour contract, alongside the [decision record](#18-ai-agents).
+**Who owns what:** the PM owns the standard, meaning what "good" looks like. Engineering owns the harness and automation. The standard below is the agent's behaviour contract, alongside the [decision record](#19-ai-agents).
 
 ### The standard
 | # | Behaviour | Pass example | Fail example | How it's checked | In the demo |
@@ -501,15 +562,15 @@ A demo that looks right once proves very little. Every rule change, threshold tw
 A per-action-type **kill switch** turns off "on its own" actions instantly.
 
 ### Try it in the demo
-Pick **Relay reviewer** at the top, then click **Run evals**. Rows 1–7 run as 10 cases through the same queries as the page and show pass or fail with the detail behind each result. Rows 8–9 are shown as "Not run here", because they need real outcomes or AI-written text.
+Click **Under the hood** at the top (the view for the Relay review team), then **Run evals**. Rows 1–7 run as 10 cases through the same queries as the page and show pass or fail with the detail behind each result. Rows 8–9 are shown as "Not run here", because they need real outcomes or AI-written text.
 
 *Further reading that shaped this section:* [Why AI evals suddenly became a product skill](https://maryamaidini.substack.com/p/why-ai-evals-suddenly-became-a-product).
 
 ---
 
-## 20. Roles and permissions
+## 21. Roles and permissions
 
-The demo walks through the first three roles as guided journeys (pick them at the top of the page). The fourth view, **Relay reviewer**, is for people judging this build, not a product role.
+The demo walks through the first three roles as guided journeys; see [Personas and journeys](#3-personas-and-journeys). **Under the hood** is for the Relay review team, not a product role.
 
 | Role | Persona in the demo | Sees | Can do | Can't do |
 |---|---|---|---|---|
@@ -526,7 +587,7 @@ The demo walks through the first three roles as guided journeys (pick them at th
 
 ---
 
-## 21. Risks and dependencies
+## 22. Risks and dependencies
 
 ### Risks
 | Risk | Impact | Mitigation |
@@ -551,7 +612,7 @@ The demo walks through the first three roles as guided journeys (pick them at th
 
 ---
 
-## 22. Background behind the design
+## 23. Background behind the design
 
 This design draws on platform work Gursahib (Guru) Suri has done before, across consumer IoT and enterprise data and AI platforms:
 
@@ -563,25 +624,25 @@ This design draws on platform work Gursahib (Guru) Suri has done before, across 
 
 ---
 
-## 23. What this project shows
+## 24. What this project shows
 
 How the skills behind this project map to what Relay's open call asks for. Each row points to where you can check it in this repo.
 
 | Relay is looking for | Skill | Where to see it here |
 |---|---|---|
 | "See a problem and start building before anyone hands you a spec" | Product discovery, problem framing | [Problem space](#2-problem-space-the-what-and-the-why), and a working demo built from scratch (`index.html`) |
-| "No POC purgatory" | Taking a prototype to production with gates | [Roadmap as bets](#5-roadmap-as-bets), [Iterative solution](#8-iterative-solution-v0-to-v5) |
-| "Data trustworthy enough for an AI agent to act on it without a person checking first" | Data quality, data contracts, governance | Alex's journey (a messy import pauses Sam's advice until it's fixed), [Data](#10-data) |
-| AI agents built on top of the data platforms | Agent permissions, autonomy levels, human approval | Sam's and Jordan's journeys (done for you / needs you / off-limits), [AI agents](#18-ai-agents), [Roles](#20-roles-and-permissions) |
-| Two platforms: Snowflake for Relay, DuckDB in each customer's browser | Platform architecture, privacy by design | 12 SQL queries running on DuckDB in the browser, [Platform architecture](#9-platform-architecture), [Privacy](#13-privacy) |
-| Production-grade thinking | Reliability, scalability, security, threat modeling | [Reliability](#11-reliability), [Scalability](#12-scalability), [Security](#14-security) |
-| Connecting to the rest of Relay and partners | APIs, MCP server, integrations | [APIs](#16-apis), [MCP server](#17-mcp-server), [Integrations](#15-integrations) |
-| Knowing whether it works | Owning the eval standard, metrics, guardrails | **Run evals** in the demo (Relay reviewer), [Evals](#19-evals), [Roadmap as bets](#5-roadmap-as-bets) |
-| "Use AI if it helps" | Building with AI tools, with judgment | [AI note](#26-ai-note): what was kept, checked and rejected |
+| "No POC purgatory" | Taking a prototype to production with gates | [Roadmap as bets](#6-roadmap-as-bets), [Iterative solution](#9-iterative-solution-v0-to-v5) |
+| "Data trustworthy enough for an AI agent to act on it without a person checking first" | Data quality, data contracts, governance | Alex's journey (a messy import pauses Sam's advice until it's fixed), [Data](#11-data) |
+| AI agents built on top of the data platforms | Agent permissions, autonomy levels, human approval | Sam's and Jordan's journeys (done for you / needs you / off-limits), [AI agents](#19-ai-agents), [Roles](#21-roles-and-permissions) |
+| Two platforms: Snowflake for Relay, DuckDB in each customer's browser | Platform architecture, privacy by design | 12 SQL queries running on DuckDB in the browser, [Platform architecture](#10-platform-architecture), [Privacy](#14-privacy) |
+| Production-grade thinking | Reliability, scalability, security, threat modeling | [Reliability](#12-reliability), [Scalability](#13-scalability), [Security](#15-security) |
+| Connecting to the rest of Relay and partners | APIs, MCP server, integrations | [APIs](#17-apis), [MCP server](#18-mcp-server), [Integrations](#16-integrations) |
+| Knowing whether it works | Owning the eval standard, metrics, guardrails | **Run evals** in the demo (Under the hood), [Evals](#20-evals), [Roadmap as bets](#6-roadmap-as-bets) |
+| "Use AI if it helps" | Building with AI tools, with judgment | [AI note](#27-ai-note): what was kept, checked and rejected |
 
 ---
 
-## 24. Run it locally
+## 25. Run it locally
 
 The demo is a static site: no build step, no server code, no accounts.
 
@@ -605,12 +666,12 @@ sample/sample_transactions.csv  sample data for the "use your own CSV" feature
 
 **Try:**
 - Walk the three journeys in order with **Next**: Sam (owner, on his phone), then Alex (bookkeeper), then Jordan (team member). What one persona does shows up for the others.
-- Pick **Relay reviewer** for everything behind the journeys: the sliders (cushion, a late customer, a new hire), the "break the data" switches, the checks, tables and every query, and **Run evals**.
-- In the reviewer view, upload `sample/sample_transactions.csv`, or your own export with `date, description, amount`.
+- Click **Under the hood** (for the Relay review team) for everything behind the journeys: the sliders (cushion, a late customer, a new hire), the "break the data" switches, the checks, tables and every query, and **Run evals**.
+- In Under the hood, upload `sample/sample_transactions.csv`, or your own export with `date, description, amount`.
 
 ---
 
-## 25. How the demo works
+## 26. How the demo works
 
 Every change re-runs 12 SQL queries in the browser, in about 0.2 seconds:
 
@@ -621,9 +682,9 @@ Every change re-runs 12 SQL queries in the browser, in about 0.2 seconds:
 6. List upcoming payments
 7–8. Forecast if reminders work (the dotted line)
 9–10. Forecast with only approved actions (the honest headline)
-11–12. Tables for the reviewer view
+11–12. Tables for Under the hood
 
-**Run evals** re-runs this pipeline for 10 test cases (clean data, three kinds of broken data, a big gap, a late customer, a new hire, an approved move) and checks the results against the standard in [Evals](#19-evals).
+**Run evals** re-runs this pipeline for 10 test cases (clean data, three kinds of broken data, a big gap, a late customer, a new hire, an approved move) and checks the results against the standard in [Evals](#20-evals).
 
 Sample data is generated in the page for a made-up company (Northside Plumbing Co.). Dates move with the day you open it. Actions are simulated: nothing is sent or moved.
 
@@ -635,7 +696,7 @@ Sample data is generated in the page for a made-up company (Northside Plumbing C
 
 ---
 
-## 26. AI note
+## 27. AI note
 
 Built with Claude (demo code, SQL, write-up), used as a sparring partner. Guru went through each decision himself: the problem and who it's for, the scope, the trust checks and their thresholds, the permission levels, and the platform design. He evaluated each one with Claude, which pushed back on gaps and weak spots before anything was kept.
 

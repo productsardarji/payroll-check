@@ -123,7 +123,7 @@ button[disabled]{opacity:.45;cursor:not-allowed}
 <header class="band"><div class="wrap top">
   <h1>Payroll Check · <span id="bizname">Northside Plumbing Co.</span></h1>
   <div class="row" style="gap:10px 14px">
-    <nav class="pick" aria-label="Choose a persona"><button data-p="owner" aria-pressed="true">Sam · owner</button><button data-p="bookkeeper" aria-pressed="false">Alex · bookkeeper</button><button data-p="team" aria-pressed="false">Jordan · team member</button><button data-p="reviewer" aria-pressed="false">Relay reviewer</button></nav>
+    <nav class="pick" aria-label="Choose a persona"><button data-p="owner" aria-pressed="true">Sam · owner</button><button data-p="bookkeeper" aria-pressed="false">Alex · bookkeeper</button><button data-p="team" aria-pressed="false">Jordan · team member</button><button data-p="reviewer" aria-pressed="false" title="For the Relay review team">Under the hood</button></nav>
     <span class="badge rev" id="engine">Engine: starting DuckDB…</span>
   </div>
 </div></header>
@@ -145,7 +145,7 @@ button[disabled]{opacity:.45;cursor:not-allowed}
     <div class="card"><div class="fig" id="fig"><svg id="chart" role="img" aria-label="Projected balance for the next 30 days"></svg></div>
       <div class="legend"><span><i></i>Projected balance</span><span><i style="background:var(--or)"></i>Your safety buffer</span><span>▲ Payroll day</span></div>
     </div>
-    <p class="hint">For Relay reviewers: everything behind the three journeys. The controls change the same shared data that Sam, Alex and Jordan see.</p>
+    <p class="hint"><b>Under the hood is for the Relay review team.</b> It shows everything behind the three journeys. The controls change the same shared data that Sam, Alex and Jordan see.</p>
     <p class="note">Sample data: Northside Plumbing Co. is a made-up 8-person service business. All names and amounts are invented.</p>
   </div>
   <aside class="card ctl" aria-label="What-if controls">
@@ -623,7 +623,7 @@ const JOURNEYS={
       return desk('Relay · Prepare a payment',`<div class="tile need"><span class="lbl">Suggested</span><span>Move ${money(L.moveAmt)} from Profit to the main account before ${nice(payBefore(L))}.</span>${S.approvedMove?'<span class="ok">✓ Sam already approved this.</span>':S.prepared?'<span class="ok">✓ Prepared and sent to Sam for approval.</span>':'<div class="row"><button data-act="prepare">Prepare for Sam’s approval</button></div>'}</div>
        <div class="tile"><div class="row"><button disabled>Approve it myself</button></div><span class="note">Only Sam, the owner, can approve moving money.</span></div>
        <div class="tile"><div class="row"><button disabled>Use Tax savings instead</button></div><span class="note">Not available to anyone, including the assistant.</span></div>`)}},
-   {t:'Hand off to Sam',say:'The request lands on Sam’s phone with Jordan’s name on it.',next:'Next: the reviewer view',
+   {t:'Hand off to Sam',say:'The request lands on Sam’s phone with Jordan’s name on it.',next:'Next: under the hood',
     view:L=>desk('Relay · Approvals',S.approvedMove?'<p class="ok">✓ Sam approved the move.</p>':S.prepared?`<p class="ok">✓ Sent to Sam for approval.</p><p>Waiting for Sam.</p><div class="row"><button class="ghost" data-act="go-owner-3">See it on Sam’s phone</button></div>`:'<p>Nothing sent yet.</p><div class="row"><button class="ghost" data-act="back">Back</button></div>')}
   ]}
 };
