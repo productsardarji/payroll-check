@@ -55,6 +55,7 @@ Built by Gursahib Suri for Relay's open call (Prompt 1: a problem a small busine
   - On its own: safe, undoable actions such as invoice reminders.
   - Asks the owner first: moving money.
   - Never: tax money or payroll.
+- **Built around real people:** the demo walks through three journeys: Sam the owner (phone), Alex the bookkeeper and Jordan the team member. Each one's actions show up for the others.
 - **Platform fit:** it runs on **DuckDB in each business's browser**, matching Relay's customer-facing data platform. **Snowflake** (proposed) only sees anonymized totals and product events.
 
 ---
@@ -500,20 +501,28 @@ A demo that looks right once proves very little. Every rule change, threshold tw
 A per-action-type **kill switch** turns off "on its own" actions instantly.
 
 ### Try it in the demo
-Click **Under the hood**, then **Run evals**. Rows 1–7 run as 10 cases through the same queries as the page and show pass or fail with the detail behind each result. Rows 8–9 are shown as "Not run here", because they need real outcomes or AI-written text.
+Pick **Relay reviewer** at the top, then click **Run evals**. Rows 1–7 run as 10 cases through the same queries as the page and show pass or fail with the detail behind each result. Rows 8–9 are shown as "Not run here", because they need real outcomes or AI-written text.
+
+*Further reading that shaped this section:* [Why AI evals suddenly became a product skill](https://maryamaidini.substack.com/p/why-ai-evals-suddenly-became-a-product).
 
 ---
 
 ## 20. Roles and permissions
 
-All proposed. The demo's **Owner view / Under the hood** toggle is a demo-only switch for reviewers. These are the product roles:
+The demo walks through the first three roles as guided journeys (pick them at the top of the page). The fourth view, **Relay reviewer**, is for people judging this build, not a product role.
 
-| Role | Sees | Can do |
-|---|---|---|
-| Owner | Answer, proof, actions | Approve or decline; undo; set buffer |
-| Admin / team member | Answer, proof | Prepare actions; approve only if delegated |
-| Accountant / bookkeeper | Checks, categories, duplicates | Fix the books; no money actions |
-| Agent | Decision record | Only what the record allows |
+| Role | Persona in the demo | Sees | Can do | Can't do |
+|---|---|---|---|---|
+| Owner | Sam, on his phone | The answer, the reasons, what was done and what needs him | Approve or decline money moves; undo reminders; set the cushion | Use the tax account (nobody can) |
+| Bookkeeper / accountant | Alex, outside bookkeeper | Data checks, duplicates, uncategorized spending | Fix the books, which unlocks the owner's answer | Any money action |
+| Team member / admin | Jordan, office manager | The same answer and reasons as the owner | Prepare a money move for the owner's approval | Approve money moves (unless the owner delegates, proposed) |
+| Agent | (the assistant) | The decision record | Only the actions the record allows, e.g. reminders | Anything on the "never" list; there is no tool for it |
+
+**How the journeys connect in the demo:**
+- Alex brings in a messy import, and Sam's phone switches to "Paused while your books are checked".
+- Alex fixes the duplicates and categories, and Sam's answer comes back.
+- Jordan prepares the move, and it shows on Sam's phone as "Prepared by Jordan".
+- Sam approves it, and his answer turns to "You're covered".
 
 ---
 
@@ -562,12 +571,12 @@ How the skills behind this project map to what Relay's open call asks for. Each 
 |---|---|---|
 | "See a problem and start building before anyone hands you a spec" | Product discovery, problem framing | [Problem space](#2-problem-space-the-what-and-the-why), and a working demo built from scratch (`index.html`) |
 | "No POC purgatory" | Taking a prototype to production with gates | [Roadmap as bets](#5-roadmap-as-bets), [Iterative solution](#8-iterative-solution-v0-to-v5) |
-| "Data trustworthy enough for an AI agent to act on it without a person checking first" | Data quality, data contracts, governance | The trust gate in the demo (Under the hood, then "Break the data"), [Data](#10-data) |
-| AI agents built on top of the data platforms | Agent permissions, autonomy levels, human approval | The three permission levels in the demo, [AI agents](#18-ai-agents), [Roles](#20-roles-and-permissions) |
+| "Data trustworthy enough for an AI agent to act on it without a person checking first" | Data quality, data contracts, governance | Alex's journey (a messy import pauses Sam's advice until it's fixed), [Data](#10-data) |
+| AI agents built on top of the data platforms | Agent permissions, autonomy levels, human approval | Sam's and Jordan's journeys (done for you / needs you / off-limits), [AI agents](#18-ai-agents), [Roles](#20-roles-and-permissions) |
 | Two platforms: Snowflake for Relay, DuckDB in each customer's browser | Platform architecture, privacy by design | 12 SQL queries running on DuckDB in the browser, [Platform architecture](#9-platform-architecture), [Privacy](#13-privacy) |
 | Production-grade thinking | Reliability, scalability, security, threat modeling | [Reliability](#11-reliability), [Scalability](#12-scalability), [Security](#14-security) |
 | Connecting to the rest of Relay and partners | APIs, MCP server, integrations | [APIs](#16-apis), [MCP server](#17-mcp-server), [Integrations](#15-integrations) |
-| Knowing whether it works | Owning the eval standard, metrics, guardrails | **Run evals** in the demo (Under the hood), [Evals](#19-evals), [Roadmap as bets](#5-roadmap-as-bets) |
+| Knowing whether it works | Owning the eval standard, metrics, guardrails | **Run evals** in the demo (Relay reviewer), [Evals](#19-evals), [Roadmap as bets](#5-roadmap-as-bets) |
 | "Use AI if it helps" | Building with AI tools, with judgment | [AI note](#26-ai-note): what was kept, checked and rejected |
 
 ---
@@ -595,10 +604,9 @@ sample/sample_transactions.csv  sample data for the "use your own CSV" feature
 ```
 
 **Try:**
-- Move the sliders: buffer, a late customer, a new hire.
-- Click **Under the hood** to see the checks, tables and every query, then **Run evals**.
-- Turn on "Bank feed stopped syncing" and watch the advice switch off.
-- Upload `sample/sample_transactions.csv`, or your own export with `date, description, amount`.
+- Walk the three journeys in order with **Next**: Sam (owner, on his phone), then Alex (bookkeeper), then Jordan (team member). What one persona does shows up for the others.
+- Pick **Relay reviewer** for everything behind the journeys: the sliders (cushion, a late customer, a new hire), the "break the data" switches, the checks, tables and every query, and **Run evals**.
+- In the reviewer view, upload `sample/sample_transactions.csv`, or your own export with `date, description, amount`.
 
 ---
 
@@ -613,7 +621,7 @@ Every change re-runs 12 SQL queries in the browser, in about 0.2 seconds:
 6. List upcoming payments
 7–8. Forecast if reminders work (the dotted line)
 9–10. Forecast with only approved actions (the honest headline)
-11–12. Tables for "Under the hood"
+11–12. Tables for the reviewer view
 
 **Run evals** re-runs this pipeline for 10 test cases (clean data, three kinds of broken data, a big gap, a late customer, a new hire, an approved move) and checks the results against the standard in [Evals](#19-evals).
 
@@ -629,7 +637,7 @@ Sample data is generated in the page for a made-up company (Northside Plumbing C
 
 ## 26. AI note
 
-Built with Claude (demo code, SQL, write-up), used as a sparring partner. Guru made each decision himself: the problem and who it's for, the scope, the trust checks and their thresholds, the permission levels, and the platform design. He tested each one with Claude, which pushed back on gaps and weak spots, especially around what the AI agent can access, what needs the owner's approval, what it must never do, and what goes into the evals.
+Built with Claude (demo code, SQL, write-up), used as a sparring partner. Guru went through each decision himself: the problem and who it's for, the scope, the trust checks and their thresholds, the permission levels, and the platform design. He evaluated each one with Claude, which pushed back on gaps and weak spots before anything was kept.
 
 Every demo figure in this README was re-run in the demo. Rejected along the way: an AI-written forecast (can't be traced back to transactions) and auto-moving money (can't be safely undone).
 

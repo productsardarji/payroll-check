@@ -77,8 +77,43 @@ footer ol{padding-left:20px;margin:6px 0}
 .view button{min-height:38px;border:0;background:transparent;color:var(--ink);font-size:14px;padding:0 12px}
 .view button[aria-pressed=true]{background:var(--ink);color:var(--bg)}
 .hint{font-size:14px;color:var(--mute)}
-body.owner .rev{display:none!important}
-body:not(.owner) .ownonly{display:none!important}
+body:not([data-p=reviewer]) .rev{display:none!important}
+body[data-p=reviewer] .jr{display:none!important}
+.pick{display:flex;flex-wrap:wrap;gap:4px;border:1px solid var(--line);border-radius:12px;padding:4px;background:var(--card)}
+.pick button{min-height:40px;border:0;background:transparent;color:var(--ink);font-size:14px;padding:0 12px;border-radius:8px}
+.pick button[aria-pressed=true]{background:var(--ink);color:var(--bg)}
+.jgrid{display:grid;grid-template-columns:minmax(0,340px) minmax(0,1fr);gap:28px;align-items:start}
+@media(max-width:860px){.jgrid{grid-template-columns:minmax(0,1fr)}}
+.who .kick{font-size:13px;color:var(--mute);margin:0}
+.who h2{font-size:24px;line-height:1.2;margin:2px 0 8px}
+.who .goal{margin:0 0 12px;font-size:15px}
+.jsteps{list-style:none;padding:0;margin:0 0 12px;display:flex;flex-direction:column;gap:4px}
+.jsteps button{width:100%;text-align:left;background:transparent;color:var(--ink);border:1px solid transparent;min-height:40px;font-weight:400;font-size:15px;display:flex;gap:10px;align-items:center}
+.jsteps button .n{display:inline-grid;place-items:center;width:24px;height:24px;border-radius:50%;border:1px solid var(--line);font-size:12px;flex:none}
+.jsteps button[aria-current=step]{border-color:var(--ink);font-weight:600}
+.jsteps button[aria-current=step] .n{background:var(--or);border-color:var(--or);color:#fff}
+.say{background:var(--bg);border-radius:8px;padding:10px 12px;font-size:14px;color:var(--mute);margin:0 0 12px}
+.stage{display:flex;justify-content:center;gap:24px;flex-wrap:wrap;align-items:flex-start}
+.phone{width:340px;max-width:100%;min-height:640px;border:10px solid #111214;border-radius:44px;background:var(--card);padding:18px 18px 24px;box-shadow:0 18px 40px rgba(0,0,0,.18);display:flex;flex-direction:column;gap:12px}
+.phone .bar{display:flex;justify-content:space-between;font-size:12px;color:var(--mute);padding:0 6px}
+.phone h3{font-size:24px;line-height:1.15;margin:4px 0 0}
+.phone p{margin:0;font-size:15px}
+.notif{background:var(--bg);border:1px solid var(--line);border-radius:16px;padding:12px 14px;font-size:15px}
+.notif b{display:block;font-size:13px;color:var(--mute);font-weight:500;margin-bottom:2px}
+.lock{font-size:56px;font-weight:300;text-align:center;margin:28px 0 4px}
+.tile{border:1px solid var(--line);border-radius:14px;padding:12px;display:flex;flex-direction:column;gap:6px;background:var(--bg)}
+.tile .lbl{font-size:12px;font-weight:600;text-transform:none;color:var(--mute)}
+.tile>button{align-self:flex-start}
+.tile.need{border-color:var(--or)}
+.tile.need .lbl{color:var(--or)}
+.big2{font-size:36px;font-weight:600;line-height:1}
+.desk{width:100%;max-width:760px;background:var(--card);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.desk .tb{background:var(--bg);border-bottom:1px solid var(--line);padding:8px 14px;font-size:13px;color:var(--mute)}
+.desk .bd{padding:18px;display:flex;flex-direction:column;gap:14px}
+.mini{border:1px dashed var(--line);border-radius:10px;padding:10px 12px;font-size:14px}
+.mini b{display:block;font-size:12px;color:var(--mute);font-weight:500}
+button[disabled]{opacity:.45;cursor:not-allowed}
+.ok{color:var(--ok);font-weight:600}.bad{color:var(--bad);font-weight:600}
 .legend{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:13px;color:var(--mute);margin-top:6px}
 .legend i{display:inline-block;width:14px;height:3px;vertical-align:middle;margin-right:5px;background:var(--ink)}
 @media(prefers-reduced-motion:no-preference){.fig path.bal{transition:d .3s}}
@@ -88,12 +123,21 @@ body:not(.owner) .ownonly{display:none!important}
 <header class="band"><div class="wrap top">
   <h1>Payroll Check · <span id="bizname">Northside Plumbing Co.</span></h1>
   <div class="row" style="gap:10px 14px">
-    <div class="view" role="group" aria-label="Choose a view"><button id="vOwner" aria-pressed="true">Owner view</button><button id="vRev" aria-pressed="false">Under the hood</button></div>
+    <nav class="pick" aria-label="Choose a persona"><button data-p="owner" aria-pressed="true">Sam · owner</button><button data-p="bookkeeper" aria-pressed="false">Alex · bookkeeper</button><button data-p="team" aria-pressed="false">Jordan · team member</button><button data-p="reviewer" aria-pressed="false">Relay reviewer</button></nav>
     <span class="badge rev" id="engine">Engine: starting DuckDB…</span>
   </div>
 </div></header>
 
-<main>
+<section class="band jr" id="journey"><div class="wrap jgrid">
+  <aside class="card who" aria-live="polite">
+    <p class="kick" id="jRole"></p><h2 id="jName"></h2><p class="goal" id="jGoal"></p>
+    <ol class="jsteps" id="jSteps"></ol>
+    <p class="say" id="jSay"></p>
+    <div class="row"><button class="ghost" id="jBack">Back</button><button id="jNext">Next</button></div>
+  </aside>
+  <div class="stage" id="jStage"><p class="note">Loading…</p></div>
+</div></section>
+<main class="rev">
 <section class="band"><div class="wrap hero">
   <div>
     <p class="answer" id="answer">Loading the numbers…</p>
@@ -101,7 +145,7 @@ body:not(.owner) .ownonly{display:none!important}
     <div class="card"><div class="fig" id="fig"><svg id="chart" role="img" aria-label="Projected balance for the next 30 days"></svg></div>
       <div class="legend"><span><i></i>Projected balance</span><span><i style="background:var(--or)"></i>Your safety buffer</span><span>▲ Payroll day</span></div>
     </div>
-    <p class="hint ownonly">This is what a business owner sees. Reviewing the build? <a href="#under-the-hood" id="toRev">Look under the hood</a> to see the data checks, the tables and every query.</p>
+    <p class="hint">For Relay reviewers: everything behind the three journeys. The controls change the same shared data that Sam, Alex and Jordan see.</p>
     <p class="note">Sample data: Northside Plumbing Co. is a made-up 8-person service business. All names and amounts are invented.</p>
   </div>
   <aside class="card ctl" aria-label="What-if controls">
@@ -122,7 +166,6 @@ body:not(.owner) .ownonly{display:none!important}
 <section class="band" style="padding-top:0"><div class="wrap">
   <h2>1. Can this data be trusted?</h2>
   <p class="lead rev">These checks run before any advice. If one fails, the assistant gives no advice and tells you what to fix.</p>
-  <p class="ownonly" id="checkline" style="margin:0;font-size:17px"></p>
   <div class="checks rev" id="checks"></div>
 </div></section>
 
@@ -257,6 +300,8 @@ async function loadSample(){
   await q('Load paid invoice history',`CREATE OR REPLACE TABLE paid AS SELECT * FROM read_csv('paid.csv',header=true,columns={'customer':'VARCHAR','due_date':'DATE','paid_date':'DATE','amount':'DOUBLE'})`);
   await q('Load open invoices',`CREATE OR REPLACE TABLE inv AS SELECT * FROM read_csv('inv.csv',header=true,columns={'invoice_id':'VARCHAR','customer':'VARCHAR','amount':'DOUBLE','due_date':'DATE'})`);
   $('bizname').textContent='Northside Plumbing Co.';$('lateWrap').hidden=false;
+  const lk=(await rawq(`SELECT round(avg(date_diff('day', due_date, paid_date))) AS d FROM paid WHERE customer = 'Lakeside HOA'`))[0].d;
+  S.usualLate=lk;$('late').value=lk;$('lateusual').textContent=`(usually ${lk})`;
 }
 
 async function run(){
@@ -361,7 +406,6 @@ SELECT strftime(day, '%Y-%m-%d') AS day, ${bal} + sum(coalesce(amt, 0)) OVER (OR
   drawChart(fin.days,buffer,payDays,L,gate,remindOn?withRem.days:fin.days);
   if(gate&&remindOn&&withRem.low.balance>L.balance+1)$('sub').textContent+=` If late clients pay on time: ${money(withRem.low.balance)} (dotted line).`;
 
-  {const f=checks.filter(c=>c.s==='fail');$('checkline').innerHTML=f.length?`<b style="color:var(--bad)">${f.length} data check${f.length>1?'s':''} failed.</b> ${esc(f.map(c=>c.d).join(' '))}`:`<b style="color:var(--ok)">✓ ${checks.length} of ${checks.length} data checks passed</b> <span class="note">(fresh bank feed, no duplicates, spending categorized)</span>`}
   $('checks').innerHTML=checks.map(c=>`<div class="card chk ${c.s}"><div class="st">${c.s==='pass'?'Pass':c.s==='warn'?'Check':'Fail'} · ${esc(c.name)}</div><p>${esc(c.d)}</p></div>`).join('');
 
   const tbl=(rows,cols)=>`<table><thead><tr>${cols.map(c=>`<th class="${c[2]||''}">${esc(c[1])}</th>`).join('')}</tr></thead><tbody>${rows.map(r=>`<tr>${cols.map(c=>`<td class="${c[2]||''}">${esc(c[2]==='n'&&typeof r[c[0]]==='number'&&/amount/.test(c[0])?money(r[c[0]]):r[c[0]])}</td>`).join('')}</tr>`).join('')}</tbody></table>`;
@@ -419,9 +463,11 @@ SELECT strftime(day, '%Y-%m-%d') AS day, ${bal} + sum(coalesce(amt, 0)) OVER (OR
     allowed_actions:gate?{on_its_own:['send_invoice_reminder'],ask_owner_first:['move_between_own_accounts','ask_supplier_to_delay_payment'],never:['use_tax_account','change_payroll','move_money_out_of_business']}:'none until checks pass',
     engine:'DuckDB '+ver+' in the browser; raw data never left the device'};
   $('record').textContent=JSON.stringify(record,null,2);
-  LAST={gate,baseLow:base.low.balance,finLow:fin.low.balance,record,moveAmt,afterRem,buffer,html,
+  LAST={gate,checks,base,fin,withRem,events,invRows,overdue,supplier,payDays,lowDay:L.day,belowDay:fin.below?fin.below.day:null,baseBelowDay:base.below?base.below.day:null,
+    baseLow:base.low.balance,finLow:fin.low.balance,record,moveAmt,afterRem,buffer,html,
     remindShown:S.mode==='sample'&&gate&&overdue.length>0&&!S.remindersUndone,overdueIds:overdue.map(r=>r.invoice_id)};
   $('qcount').textContent=qlog.length;
+  renderJourney();
   $('qlog').innerHTML=qlog.map((x,i)=>`<p style="margin:10px 0 2px;font-size:14px"><b>${i+1}. ${esc(x.label)}</b> <span class="note">${x.ms.toFixed(1)} ms · ${x.n} rows</span></p><pre>${esc(x.sql)}</pre>`).join('');
 }
 
@@ -472,7 +518,7 @@ async function loadUpload(file){
 /* ---------- evals ---------- */
 const CASES={clean:{},stale:{bStale:true},dup:{bDup:true},uncat:{bUncat:true},late40:{late:40},hire:{hire:true},tight:{buf:20000}};
 async function runCase(cfg,state={}){
-  const d={bStale:false,bDup:false,bUncat:false,late:18,hire:false,buf:8000,...cfg};
+  const d={bStale:false,bDup:false,bUncat:false,late:S.usualLate??18,hire:false,buf:8000,...cfg};
   for(const k of ['bStale','bDup','bUncat','hire'])$(k).checked=d[k];
   $('late').value=d.late;$('buf').value=d.buf;
   S.approvedMove=state.move||0;S.delayed=false;S.remindersUndone=false;
@@ -513,6 +559,97 @@ async function runEvals(){
   $('evals').innerHTML=`<table><thead><tr><th>Behaviour</th><th>How it’s checked</th><th>Result</th><th>Detail</th></tr></thead><tbody>${rows.map(r=>`<tr><td style="white-space:normal">${esc(r.name)}</td><td style="white-space:normal">${esc(r.method)}</td><td style="font-weight:600;color:${r.ok===null?'var(--mute)':r.ok?'var(--ok)':'var(--bad)'}">${r.ok===null?'Not run here':r.ok?'✓ Pass':'✗ Fail'}</td><td style="white-space:normal" class="note">${esc(r.detail)}</td></tr>`).join('')}</tbody></table>`;
 }
 
+
+/* ---------- persona journeys ---------- */
+let JP='owner';const JS={owner:0,bookkeeper:0,team:0,reviewer:0};
+S.prepared=false;S.imported=false;
+const rawq=async sql=>(await conn.query(sql)).toArray().map(r=>{const o=r.toJSON();for(const k in o)o[k]=norm(o[k]);return o});
+const plainFail={fresh:'Your bank feed stopped syncing, so recent payments are missing.',dups:'Some payments were imported twice.',cat:'A lot of recent spending isn’t sorted into categories.'};
+function spark(L){const d=L.fin.days,W=284,H=92,p=6;const v=d.map(x=>x.balance).concat([L.buffer,0]);const mn=Math.min(...v),mx=Math.max(...v);
+  const x=i=>p+i*(W-2*p)/(d.length-1),y=b=>p+(mx-b)*(H-2*p)/((mx-mn)||1);const li=d.findIndex(r=>r.day===L.lowDay);
+  return `<svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="Balance for the next 30 days, lowest ${money(L.finLow)}"><line x1="${p}" x2="${W-p}" y1="${y(L.buffer)}" y2="${y(L.buffer)}" stroke="#ff4f00" stroke-width="1.5" stroke-dasharray="4 3"/><path d="${d.map((r,i)=>(i?'L':'M')+x(i).toFixed(1)+','+y(r.balance).toFixed(1)).join('')}" fill="none" stroke="var(--ink)" stroke-width="2"/>${li>=0?`<circle cx="${x(li)}" cy="${y(L.finLow)}" r="4" fill="#ff4f00"/>`:''}</svg><p class="note" style="font-size:12px">Next 30 days · orange dashes = your cushion</p>`}
+const headline=L=>!L.gate?'We’re double-checking your numbers':L.finLow<0?`Heads up: you’d run out of cash on ${nice(L.lowDay)}`:L.finLow<L.buffer?'Payroll is covered, but it’s tight':'You’re covered for the next 30 days';
+const payBefore=L=>L.payDays.find(d=>d<=(L.baseBelowDay||L.lowDay))||L.payDays[0];
+const failed=L=>L.checks.filter(c=>c.s==='fail');
+const paused=L=>`<h3>Paused while your books are checked</h3><p>We found problems that could make the numbers wrong:</p><ul style="margin:0;padding-left:20px;font-size:15px">${failed(L).map(c=>`<li>${esc(plainFail[c.k]||c.d)}</li>`).join('')}</ul><p>${failed(L).some(c=>c.k==='fresh')?'Reconnect your bank feed in Settings. '+(failed(L).length>1?'Alex, your bookkeeper, has been asked to fix the rest.':''):'Alex, your bookkeeper, has been asked to fix them.'} Your answer comes back as soon as it’s fixed.</p><button data-act="go-bookkeeper">See Alex’s view</button>`;
+const phone=(inner,time='7:42')=>`<div class="phone"><div class="bar"><span>${time}</span><span>Relay</span></div>${inner}</div>`;
+const desk=(title,inner)=>`<div class="desk"><div class="tb">${esc(title)}</div><div class="bd">${inner}</div></div>`;
+const samNow=L=>`<div class="mini"><b>Sam’s phone right now</b>${esc(headline(L))}${L.gate?` · lowest ${money(L.finLow)} on ${nice(L.lowDay)}`:''}</div>`;
+
+const JOURNEYS={
+ owner:{role:'Persona 1 of 3 · Business owner',name:'Sam, owner of Northside Plumbing',goal:'Runs an 8-person plumbing company and checks the Relay app on his phone before the first job. Wants to know: will payroll clear on Friday?',
+  steps:[
+   {t:'The morning nudge',say:'Sam doesn’t open a dashboard. A short nudge arrives only when something needs his attention.',next:'Open the app',
+    view:L=>phone(`<div class="lock">7:42</div><p style="text-align:center" class="note">Wednesday</p><div class="notif"><b>Relay · now</b>${!L.gate?'Your bookkeeper is fixing a couple of things in your books. Advice is on hold until then.':L.finLow<L.buffer?`Heads up: payroll on ${nice(payBefore(L))} leaves you below your cushion. Tap to see why.`:'All good. Payroll and bills are covered for the next 30 days.'}</div>`)},
+   {t:'The answer',say:'One sentence in plain words, the date that matters, and a sign the numbers were checked.',
+    view:L=>phone(!L.gate?paused(L):`<p class="note">Cash check</p><h3>${esc(headline(L))}</h3><p>Lowest point: <b>${money(L.finLow)}</b> on ${nice(L.lowDay)}. You like to keep at least ${money(L.buffer)}.</p>${spark(L)}<p class="note">✓ Checked this morning: bank feed up to date, no double payments, spending sorted.</p>`)},
+   {t:'Why',say:'The reasons in Sam’s own terms: his payroll, his rent, his clients. Nothing to decode.',
+    view:L=>{if(!L.gate)return phone(paused(L));const until=L.baseBelowDay||L.lowDay;
+      const out=L.events.filter(e=>e.d<=until&&(e.category==='Payroll'||e.category==='Rent')).map(e=>`<div class="tile"><span class="lbl">${e.category==='Payroll'?'Payroll':'Rent'} · ${nice(e.d)}</span><span>${money(e.amount)} goes out</span></div>`);
+      const inv=L.invRows.filter(r=>r.due<=until).map(r=>`<div class="tile"><span class="lbl">Waiting on ${esc(r.customer)}</span><span>Owes you ${money(r.amount)}. Due ${nice(r.due)}, and usually pays about ${r.usual_late} days late.</span></div>`);
+      return phone(`<p class="note">Why it’s tight</p><h3>Money goes out before it comes in</h3>${out.join('')}${inv.join('')}`)}},
+   {t:'What happens next',say:'Safe things are already done and can be undone. Moving money waits for Sam. Tax savings are never touched.',
+    view:L=>{if(!L.gate)return phone(paused(L));const names=L.overdue.map(r=>r.customer).join(' and ');
+      const done=L.overdue.length?`<div class="tile"><span class="lbl">Done for you</span>${S.remindersUndone?`<span>Reminders to ${esc(names)} were not sent.</span><button class="ghost" data-act="sendRem">Send them</button>`:`<span>✓ Sent friendly payment reminders to ${esc(names)}.</span><button class="ghost" data-act="undoRem">Undo</button>`}</div>`:'';
+      const need=L.afterRem>0&&L.moveAmt>0?`<div class="tile need"><span class="lbl">Needs you</span>${S.approvedMove?`<span>✓ Approved: ${money(S.approvedMove)} moved from Profit to your main account (simulated).</span><button class="ghost" data-act="unapprove">Undo</button>`:`<span>Move ${money(L.moveAmt)} from your Profit account (${money(S.balances.Profit)}) to cover the gap before ${nice(payBefore(L))}.</span>${S.prepared?'<span class="note">Prepared by Jordan, your office manager.</span>':''}<div class="row"><button data-act="approve">Approve</button><button class="ghost" data-act="notnow">Not now</button></div>`}</div>`:`<div class="tile"><span class="lbl">Needs you</span><span>Nothing today.</span></div>`;
+      return phone(`<p class="note">What happens next</p>${done}${need}<div class="tile"><span class="lbl">Off-limits</span><span>Your Tax savings (${money(S.balances.Tax)}) stay put. The app never uses them.</span></div>`)}},
+   {t:'Covered',say:'Sam sees the result of what he approved, and when the app will check again.',next:'Next: Alex’s journey',
+    view:L=>{if(!L.gate)return phone(paused(L));const ok=L.finLow>=L.buffer;
+      return phone(`<p class="note">Cash check</p><h3>${ok?'You’re covered':'Still tight'}</h3><p>${ok?`Lowest point now <b>${money(L.finLow)}</b> on ${nice(L.lowDay)}, above your ${money(L.buffer)} cushion.`:`Lowest point <b>${money(L.finLow)}</b> on ${nice(L.lowDay)}. We’ll check again before payroll and tell you if the invoices arrived.`}</p>${spark(L)}${!ok&&L.withRem.low.balance>L.finLow+1&&!S.remindersUndone?`<p class="note">If your clients pay on time after the reminders, your lowest point would be ${money(L.withRem.low.balance)}. The app doesn’t count on that.</p>`:''}`)}}
+  ]},
+ bookkeeper:{role:'Persona 2 of 3 · Bookkeeper',name:'Alex, outside bookkeeper',goal:'Keeps the books for Northside and about 30 other small businesses. Wants clean books, so owners’ tools give the right answers.',
+  steps:[
+   {t:'Today’s bank import',say:'Real imports are messy. Watch what happens to Sam’s answer when bad data comes in.',
+    view:L=>desk('Relay for accountants · Northside Plumbing',S.imported?`<p><b>Imported.</b> ${failed(L).length?`<span class="bad">${failed(L).length} problem${failed(L).length>1?'s':''} found.</span> Advice to Sam is paused until they’re fixed.`:'<span class="ok">No problems found.</span>'}</p>${samNow(L)}`:`<p>Today’s bank import for Northside Plumbing is ready.</p><div class="row"><button data-act="import">Bring in today’s import</button></div>${samNow(L)}`)},
+   {t:'Fix what’s flagged',say:'Each problem comes with a fix. The checks re-run after every fix.',
+    view:async L=>{const f=failed(L);if(!f.length)return desk('Relay for accountants · Northside Plumbing · Data checks',`<p class="ok">✓ Nothing to fix. All data checks pass.</p>${S.imported?'':'<div class="row"><button class="ghost" data-act="import">Bring in today’s import</button></div>'}${samNow(L)}`);
+      let h='';for(const c of f){
+       if(c.k==='dups'){const r=await rawq(`SELECT strftime(date,'%Y-%m-%d') AS d, description, amount, count(*) AS n FROM tx GROUP BY ALL HAVING count(*)>1 ORDER BY d`);
+        h+=`<div class="tile"><span class="lbl">Imported twice</span>${r.map(x=>`<span>${nice(x.d)} · ${esc(x.description)} · ${money(x.amount)} (×${x.n})</span>`).join('')}<div class="row"><button data-act="fixDup">Remove duplicates</button></div></div>`}
+       if(c.k==='cat'){const r=(await rawq(`SELECT count(*) AS n, coalesce(sum(-amount),0) AS t FROM tx WHERE category IS NULL AND amount<0 AND date > ${A} - 30`))[0];
+        h+=`<div class="tile"><span class="lbl">Not categorized</span><span>${r.n} payments, ${money(r.t)} in the last 30 days. Most are Ferguson Supply and the Shell fleet card.</span><div class="row"><button data-act="fixCat">Categorize as Materials and Fuel</button></div></div>`}
+       if(c.k==='fresh')h+=`<div class="tile"><span class="lbl">Bank feed stopped syncing</span><span>Only Sam can reconnect his bank. Alex can’t fix this one.</span></div>`}
+      return desk('Relay for accountants · Northside Plumbing · Data checks',h+samNow(L))}},
+   {t:'Hand back to Sam',say:'Clean books unlock Sam’s answer. Alex never sees or approves money moves.',next:'Next: Jordan’s journey',
+    view:L=>desk('Relay for accountants · Northside Plumbing',L.gate?`<p class="ok">✓ All data checks pass.</p><p>Sam’s answer is back:</p><div class="mini"><b>On Sam’s phone</b>${esc(headline(L))} · lowest ${money(L.finLow)} on ${nice(L.lowDay)}</div><div class="row"><button class="ghost" data-act="go-owner-1">See Sam’s phone</button></div>`:`<p class="bad">${failed(L).length} problem${failed(L).length>1?'s':''} still to fix.</p><div class="row"><button class="ghost" data-act="back">Back to the fix list</button></div>`)}
+  ]},
+ team:{role:'Persona 3 of 3 · Team member',name:'Jordan, office manager',goal:'Handles bills and scheduling for Sam. Can see the cash check and prepare payments, but can’t approve moving money.',
+  steps:[
+   {t:'See the cash check',say:'Jordan sees the same answer and reasons as Sam, so they’re working from one set of numbers.',
+    view:L=>desk('Relay · Northside Plumbing · Cash check',!L.gate?`<p class="bad">Paused: the books have problems Alex is fixing.</p>`:`<p class="big2">${money(L.finLow)}</p><p>Lowest point, on ${nice(L.lowDay)}. ${L.finLow<L.buffer?`That’s ${money(L.buffer-L.finLow)} under Sam’s ${money(L.buffer)} cushion.`:`Above Sam’s ${money(L.buffer)} cushion.`}</p>${spark(L)}`)},
+   {t:'Prepare the fix',say:'Jordan can prepare the move, but the permission levels decide who approves it.',
+    view:L=>{if(!L.gate)return desk('Relay · Prepare a payment','<p class="bad">Nothing to prepare while advice is paused.</p>');
+      if(!(L.afterRem>0&&L.moveAmt>0))return desk('Relay · Prepare a payment','<p class="ok">No gap to cover. Nothing to prepare.</p>');
+      return desk('Relay · Prepare a payment',`<div class="tile need"><span class="lbl">Suggested</span><span>Move ${money(L.moveAmt)} from Profit to the main account before ${nice(payBefore(L))}.</span>${S.approvedMove?'<span class="ok">✓ Sam already approved this.</span>':S.prepared?'<span class="ok">✓ Prepared and sent to Sam for approval.</span>':'<div class="row"><button data-act="prepare">Prepare for Sam’s approval</button></div>'}</div>
+       <div class="tile"><div class="row"><button disabled>Approve it myself</button></div><span class="note">Only Sam, the owner, can approve moving money.</span></div>
+       <div class="tile"><div class="row"><button disabled>Use Tax savings instead</button></div><span class="note">Not available to anyone, including the assistant.</span></div>`)}},
+   {t:'Hand off to Sam',say:'The request lands on Sam’s phone with Jordan’s name on it.',next:'Next: the reviewer view',
+    view:L=>desk('Relay · Approvals',S.approvedMove?'<p class="ok">✓ Sam approved the move.</p>':S.prepared?`<p class="ok">✓ Sent to Sam for approval.</p><p>Waiting for Sam.</p><div class="row"><button class="ghost" data-act="go-owner-3">See it on Sam’s phone</button></div>`:'<p>Nothing sent yet.</p><div class="row"><button class="ghost" data-act="back">Back</button></div>')}
+  ]}
+};
+let jr=0;
+async function renderJourney(){
+  if(!LAST||JP==='reviewer'||!JOURNEYS[JP])return;
+  const J=JOURNEYS[JP],i=Math.min(JS[JP],J.steps.length-1),st=J.steps[i],my=++jr;
+  $('jRole').textContent=J.role;$('jName').textContent=J.name;$('jGoal').textContent=J.goal;$('jSay').textContent=st.say;
+  $('jSteps').innerHTML=J.steps.map((x,k)=>`<li><button data-step="${k}" ${k===i?'aria-current="step"':''}><span class="n">${k+1}</span>${esc(x.t)}</button></li>`).join('');
+  $('jBack').disabled=i===0;$('jNext').textContent=st.next||'Next';
+  const html=await st.view(LAST);if(my!==jr)return;$('jStage').innerHTML=html;
+}
+$('jSteps').onclick=e=>{const b=e.target.closest('[data-step]');if(b){JS[JP]=+b.dataset.step;renderJourney()}};
+$('jStage').onclick=e=>{const b=e.target.closest('[data-act]');if(!b)return;const a=b.dataset.act;
+  if(a==='go-bookkeeper')return setPersona('bookkeeper',1);
+  if(a==='go-owner-1')return setPersona('owner',1);
+  if(a==='go-owner-3')return setPersona('owner',3);
+  if(a==='back'){JS[JP]=Math.max(0,JS[JP]-1);return renderJourney()}
+  if(a==='undoRem')S.remindersUndone=true;if(a==='sendRem')S.remindersUndone=false;
+  if(a==='approve')S.approvedMove=LAST.moveAmt;if(a==='unapprove'||a==='notnow')S.approvedMove=0;
+  if(a==='notnow'){JS.owner=4}
+  if(a==='prepare')S.prepared=true;
+  if(a==='import'){S.imported=true;$('bDup').checked=true;$('bUncat').checked=true}
+  if(a==='fixDup')$('bDup').checked=false;if(a==='fixCat')$('bUncat').checked=false;
+  go()};
+
 /* ---------- wire up ---------- */
 let busy=false,again=false;
 async function go(){if(busy){again=true;return}busy=true;try{await run()}catch(e){$('answer').textContent='Something went wrong running the queries.';$('sub').innerHTML=`<span class="err">${esc(e.message)}</span>`;console.error(e)}busy=false;if(again){again=false;go()}}
@@ -521,12 +658,17 @@ $('runEvals').onclick=runEvals;
 $('copyRec').onclick=async()=>{try{await navigator.clipboard.writeText($('record').textContent);$('copied').textContent='Copied.'}catch(e){$('copied').textContent='Copy blocked here. Select the text instead.'}};
 $('file').onchange=async e=>{const f=e.target.files[0];if(!f)return;try{await loadUpload(f);go()}catch(err){$('upmsg').innerHTML=`<span class="err">${esc(err.message)}</span>`}};
 $('reset').onclick=async()=>{S.approvedMove=0;S.delayed=false;S.remindersUndone=false;$('file').value='';$('upmsg').textContent='';await loadSample();go()};
-$('lateusual').textContent='(usually 18)';
-const setView=v=>{const rev=v==='reviewer';document.body.classList.toggle('owner',!rev);$('vOwner').setAttribute('aria-pressed',String(!rev));$('vRev').setAttribute('aria-pressed',String(rev));if((location.hash==='#under-the-hood')!==rev){try{history.replaceState(null,'',rev?'#under-the-hood':location.pathname+location.search)}catch(e){location.hash=rev?'under-the-hood':''}}};
-$('vOwner').onclick=()=>setView('owner');$('vRev').onclick=()=>setView('reviewer');
-$('toRev').onclick=e=>{e.preventDefault();setView('reviewer');$('checks').scrollIntoView({behavior:'smooth'})};
-addEventListener('hashchange',()=>setView(location.hash==='#under-the-hood'?'reviewer':'owner'));
-setView(location.hash==='#under-the-hood'?'reviewer':'owner');
+const HASH={owner:'owner',bookkeeper:'bookkeeper',team:'team-member',reviewer:'under-the-hood'};
+const fromHash=()=>Object.keys(HASH).find(k=>'#'+HASH[k]===location.hash)||'owner';
+function setPersona(p,step){JP=p;if(step!=null)JS[p]=step;document.body.dataset.p=p;
+  for(const b of document.querySelectorAll('.pick button'))b.setAttribute('aria-pressed',String(b.dataset.p===p));
+  if(location.hash!=='#'+HASH[p]){try{history.replaceState(null,'','#'+HASH[p])}catch(e){location.hash=HASH[p]}}
+  renderJourney();if(p==='reviewer')requestAnimationFrame(paint);scrollTo({top:0})}
+for(const b of document.querySelectorAll('.pick button'))b.onclick=()=>setPersona(b.dataset.p);
+addEventListener('hashchange',()=>{const p=fromHash();if(p!==JP)setPersona(p)});
+$('jBack').onclick=()=>{JS[JP]=Math.max(0,JS[JP]-1);renderJourney()};
+$('jNext').onclick=()=>{const n=JOURNEYS[JP].steps.length;if(JS[JP]<n-1){JS[JP]++;renderJourney()}else{const nx={owner:'bookkeeper',bookkeeper:'team',team:'reviewer'}[JP];setPersona(nx,0)}};
+setPersona(fromHash());
 (async()=>{try{await startDB();await loadSample();await go()}catch(e){
   $('engine').innerHTML='<span class="err">DuckDB could not start in this viewer</span>';
   $('answer').textContent='The data engine couldn’t start here.';
