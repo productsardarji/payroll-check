@@ -368,7 +368,7 @@ Only **aggregates and events**, never raw transactions:
 | Bad rule release | Rules are versioned; roll back with a flag |
 
 ### Observability
-Each decision record includes the rules version, check results and timings. Dashboards track the share blocked by each check, forecast error (shadow), action and undo rates, and p95 latency.
+Each decision record includes the rules version, check results and timings. An action log records who did what, when, and whether it can still be undone (shown under the hood in the demo). Dashboards track the share blocked by each check, forecast error (shadow), action and undo rates, and p95 latency.
 
 ---
 
@@ -445,10 +445,11 @@ Content-Type: application/json
 
 { "decision_record_id": "dr_8f2c", "type": "send_invoice_reminder", "invoice_id": "INV-1042" }
 ```
-**Response:** `201` `{ "action_id": "act_19", "status": "sent", "undo_until": "2026-11-25T23:00:00Z" }`
+**Response:** `201` `{ "action_id": "act_19", "status": "scheduled", "send_at": "2026-11-25T15:00:00Z", "undo_until": "2026-11-25T15:00:00Z" }`. The reminder waits in an outbox until `send_at`; `POST /v1/actions/act_19/undo` before then cancels it.
 
 **Errors:**
 - `409 record_expired`: the data changed, so the cash check has to run again.
+- `409 undo_window_closed`: the action can no longer be undone (e.g. the reminder was already sent).
 - `403 action_not_allowed`: not in the record.
 - `422 checks_failed`: the trust gate failed.
 
@@ -505,6 +506,11 @@ For owners' and accountants' own AI assistants, and for internal Relay agents. A
     "on_its_own": ["send_invoice_reminder"],
     "ask_owner_first": ["move_between_own_accounts", "ask_supplier_to_delay_payment"],
     "never": ["use_tax_account", "change_payroll", "move_money_out_of_business"]
+  },
+  "undo_rules": {
+    "send_invoice_reminder": "held in an outbox until the send time; cancel any time before it; once sent it cannot be unsent",
+    "move_between_own_accounts": "reversed by moving the money back, which the owner approves",
+    "ask_supplier_to_delay_payment": "cancel until the supplier replies; once they agree it is an agreement and cannot be undone"
   }
 }
 ```
@@ -512,9 +518,33 @@ For owners' and accountants' own AI assistants, and for internal Relay agents. A
 ### Autonomy levels
 | Level | Examples | Human role |
 |---|---|---|
-| On its own | Invoice reminders | Told after; can undo |
+| On its own | Invoice reminders | Told right away; can cancel until the send time |
 | Asks first | Move between own accounts; supplier delay request | Approves each one |
 | Never | Tax account, payroll, money out | None, because the tool doesn't exist |
+
+### How undo works
+"Can be undone" only means something if the design builds in a real way back. Undo never deletes history: a reversal is a new entry in the action log.
+
+| Action | Who can start it | What "undo" means | Undo window | After the window closes |
+|---|---|---|---|---|
+| Payment reminder | Assistant, on its own | Cancel it. Reminders wait in an outbox and nothing goes out early. | Until the send time (10:00 AM in the demo) | Delivered, so it can't be unsent. The fix is a follow-up note. |
+| Reminder when the data breaks before the send time | Assistant | It's **held**, not sent | Until the data checks pass again | The owner chooses: send now or cancel |
+| Move between own accounts | Owner approves (team member can prepare) | Move it back: a second transfer, which the owner approves | Any time, as long as the money is still there | Both transfers stay in the history |
+| Prepared move, not yet approved | Team member | Withdraw it | Until the owner approves | Only the owner can move it back |
+| Ask a supplier to delay a payment | Owner or team member | Cancel the request | Until the supplier replies | It's an agreement with the supplier, so it can't be undone in the app |
+| Payroll, tax money, money out of the business | Nobody (no tool exists) | Not applicable | Not applicable | Not applicable |
+
+**Design rules**
+- **The assistant acts on its own only when there's a real undo window.** That's why reminders sit in an outbox instead of sending instantly.
+- **Every action shows its undo state on screen**, e.g. "Undo: cancel before 10:00 AM". The button disappears when undo is no longer possible, instead of pretending.
+- **Reversals are new actions with their own approval and log entry.** Moving money back needs the owner, just like moving it in the first place.
+- **The API carries the window:** `undo_until` on every action response (see [APIs](#17-apis)), and `409 undo_window_closed` after it.
+
+**Try it in the demo:**
+1. In Sam's journey, step 4, cancel and reschedule the reminders, approve the move, then move it back.
+2. Click **Skip to 10:00 AM** in the demo clock at the top. The reminders send, and their undo button disappears.
+3. In Jordan's journey, step 2, ask Ferguson for more time, cancel the request, send it again, then **Skip to 11:00 AM**. Ferguson agrees, and it can no longer be undone.
+4. Every step appears in the **Action log** under the hood.
 
 ### Evals
 See [Evals](#20-evals) for what good looks like and how it's checked.
@@ -539,6 +569,7 @@ A demo that looks right once proves very little. Every rule change, threshold tw
 | 7 | Moves in a sensible direction | Later payment or a new hire → lower low point | Later payment → better outlook | Compare two runs | ✓ |
 | 8 | Forecast accuracy | Low point within ±10% of what really happened | Off by 40% | Shadow mode vs. real outcomes | Needs real data |
 | 9 | Reminder wording (future AI-written text) | Polite, factual, correct amount, in the owner's name | Threatening tone or a wrong amount | Code check on amounts, then a model grader, then human review | Not in v0 |
+| 10 | Offers undo only while it can really work | "Undo: cancel before 10:00 AM" before sending; no undo button after | An Undo button on a reminder that already went out | Code check on the screens Sam and Jordan see | ✓ |
 
 ### How the evals get built
 1. **Start with real failures, not metrics.** In shadow mode (v1), read 10 decision records by hand, then about 100. Write each failure in plain words, e.g. "counted a one-off deposit as regular" or "missed a quarterly bill". Name categories from what is actually seen, not generic labels like "accuracy".
@@ -562,7 +593,9 @@ A demo that looks right once proves very little. Every rule change, threshold tw
 A per-action-type **kill switch** turns off "on its own" actions instantly.
 
 ### Try it in the demo
-Click **Under the hood** at the top (the view for the Relay review team), then **Run evals**. Rows 1–7 run as 10 cases through the same queries as the page and show pass or fail with the detail behind each result. Rows 8–9 are shown as "Not run here", because they need real outcomes or AI-written text.
+Click **Under the hood** at the top (the view for the Relay review team), then **Run evals**. Rows 1–7 and 10 run as 11 checks through the same queries as the page, and show pass or fail with the detail behind each result. Rows 8–9 are shown as "Not run here", because they need real outcomes or AI-written text.
+
+*Further reading that shaped this section:* [Why AI evals suddenly became a product skill](https://maryamaidini.substack.com/p/why-ai-evals-suddenly-became-a-product).
 
 ---
 
@@ -682,7 +715,9 @@ Every change re-runs 12 SQL queries in the browser, in about 0.2 seconds:
 9–10. Forecast with only approved actions (the honest headline)
 11–12. Tables for Under the hood
 
-**Run evals** re-runs this pipeline for 10 test cases (clean data, three kinds of broken data, a big gap, a late customer, a new hire, an approved move) and checks the results against the standard in [Evals](#20-evals).
+**Run evals** re-runs this pipeline for 11 checks (clean data, three kinds of broken data, a big gap, a late customer, a new hire, an approved move, and the undo windows) and checks the results against the standard in [Evals](#20-evals).
+
+**Demo clock:** the clock at the top starts at 7:42 AM. **Skip to 10:00 AM** sends the scheduled reminders, or holds them if the data is broken. **Skip to 11:00 AM** brings the supplier's reply. **Reset day** starts over.
 
 Sample data is generated in the page for a made-up company (Northside Plumbing Co.). Dates move with the day you open it. Actions are simulated: nothing is sent or moved.
 
@@ -696,7 +731,7 @@ Sample data is generated in the page for a made-up company (Northside Plumbing C
 
 ## 27. AI note
 
-Built with Claude (demo code, SQL, write-up), used as a sparring partner. Guru made each decision himself: the problem and who it's for, the scope, the trust checks and their thresholds, the permission levels, and the platform design. He tested each one with Claude, which pushed back on gaps and weak spots, especially around what the AI agent can access, what needs the owner's approval, what it must never do, and what goes into the evals.
+Built with Claude (demo code, SQL, write-up), used as a sparring partner. Guru went through each decision himself: the problem and who it's for, the scope, the trust checks and their thresholds, the permission levels, and the platform design. He evaluated each one with Claude, which pushed back on gaps and weak spots before anything was kept.
 
 Every demo figure in this README was re-run in the demo. Rejected along the way: an AI-written forecast (can't be traced back to transactions) and auto-moving money (can't be safely undone).
 

@@ -79,6 +79,8 @@ footer ol{padding-left:20px;margin:6px 0}
 .hint{font-size:14px;color:var(--mute)}
 body:not([data-p=reviewer]) .rev{display:none!important}
 body[data-p=reviewer] .jr{display:none!important}
+.clock{display:flex;align-items:center;gap:6px;flex-wrap:wrap;font-size:14px}
+.clock button{min-height:36px;font-size:13px;padding:0 10px}
 .pick{display:flex;flex-wrap:wrap;gap:4px;border:1px solid var(--line);border-radius:12px;padding:4px;background:var(--card)}
 .pick button{min-height:40px;border:0;background:transparent;color:var(--ink);font-size:14px;padding:0 12px;border-radius:8px}
 .pick button[aria-pressed=true]{background:var(--ink);color:var(--bg)}
@@ -123,6 +125,7 @@ button[disabled]{opacity:.45;cursor:not-allowed}
 <header class="band"><div class="wrap top">
   <h1>Payroll Check · <span id="bizname">Northside Plumbing Co.</span></h1>
   <div class="row" style="gap:10px 14px">
+    <div class="clock" aria-live="polite"><span class="note">Demo clock</span> <b id="clockT">7:42 AM</b> <button class="ghost" id="clockSkip">Skip to 10:00 AM</button><button class="ghost" id="clockReset" title="Start the demo day again">Reset day</button></div>
     <nav class="pick" aria-label="Choose a persona"><button data-p="owner" aria-pressed="true">Sam · owner</button><button data-p="bookkeeper" aria-pressed="false">Alex · bookkeeper</button><button data-p="team" aria-pressed="false">Jordan · team member</button><button data-p="reviewer" aria-pressed="false" title="For the Relay review team">Under the hood</button></nav>
     <span class="badge rev" id="engine">Engine: starting DuckDB…</span>
   </div>
@@ -187,6 +190,11 @@ button[disabled]{opacity:.45;cursor:not-allowed}
     <p class="note" style="margin:0">One decision record: the inputs, the checks, the answer and the allowed actions. An agent may act only on what this record allows.</p>
     <details><summary>Show the decision record (JSON)</summary><div class="row" style="margin:6px 0"><button class="ghost" id="copyRec">Copy</button><span class="note" id="copied"></span></div><pre id="record"></pre></details>
     <details><summary>Show every query that ran (<span id="qcount">0</span>)</summary><div id="qlog"></div></details>
+  </div>
+  <div class="card" style="margin-top:12px">
+    <h3 style="margin:0 0 6px;font-size:15px">Action log: who did what, and can it still be undone?</h3>
+    <p class="note" style="margin:0 0 8px">Every action by Sam, Alex, Jordan or the assistant, in order. Undo never deletes history: a reversal is a new entry.</p>
+    <div class="scroll" id="actlog"></div>
   </div>
   <div class="card" style="margin-top:12px">
     <h3 style="margin:0 0 6px;font-size:15px">Evals: does it behave the way it promises?</h3>
@@ -288,7 +296,9 @@ async function q(label,sql){const t=performance.now();const res=await conn.query
 
 /* ---------- state ---------- */
 let LAST=null;
-const S={mode:'sample',balances:null,approvedMove:0,delayed:false,remindersSent:true,remindersUndone:false};
+const S={mode:'sample',balances:null,approvedMove:0,delayed:false,now:462,rem:'scheduled',moveState:'none',sup:'none',log:[],remLogged:false,silent:false};
+const SEND_AT=600,REPLY_AT=660;
+Object.defineProperty(S,'remindersUndone',{get(){return S.rem==='cancelled'},set(v){S.rem=v?'cancelled':'scheduled'}});
 const D=s=>`DATE '${s}'`;const A=D(ASOF);
 
 async function loadSample(){
@@ -382,7 +392,7 @@ SELECT strftime(day, '%Y-%m-%d') AS day, ${bal} + sum(coalesce(amt, 0)) OVER (OR
     let low=days[0];for(const r of days)if(r.balance<low.balance)low=r;
     const below=days.find(r=>r.balance<buffer);return {days,low,below};
   };
-  const remindOn=S.mode==='sample'&&gate&&!S.remindersUndone;
+  const remindOn=S.mode==='sample'&&gate&&(S.rem==='scheduled'||S.rem==='sent');
   // baseline without any action, to size the problem
   const base=await forecast('Baseline (no action)',false,0,false);
   const events=await q('Upcoming events (baseline)',`SELECT description, category, amount, strftime(d,'%Y-%m-%d') AS d FROM ev ORDER BY d, amount`);
@@ -427,20 +437,20 @@ SELECT strftime(day, '%Y-%m-%d') AS day, ${bal} + sum(coalesce(amt, 0)) OVER (OR
       const gain=withRem.low.balance-fin.low.balance;
       t1.push(`<div class="act"><p>Send payment reminders for ${overdue.map(r=>`${esc(r.invoice_id)} (${esc(r.customer)}, ${money(r.amount)})`).join(' and ')}.</p>
       <p class="imp rev">If they pay on time, your lowest point rises by about ${money(gain)}. Assumption: a reminder gets them to pay by the due date. The forecast doesn\u2019t count on it.</p>
-      <div class="row">${S.remindersUndone?`<button id="aRem">Send reminders</button>`:`<span class="done">✓ Sent by the assistant (simulated)</span><button class="ghost" id="aUndo">Undo</button>`}</div>
+      ${remState(overdue.map(r=>r.customer).join(' and '),gate)}
       ${proof('Why these invoices',`SELECT invoice_id, customer, amount, due_date FROM inv WHERE due_date <= ${A} + 7`,overdue,[['invoice_id','Invoice'],['customer','Customer'],['amount','Amount','n'],['due','Due']])}</div>`);
     }
     if(short===0&&!t1.length)t1.push('<p class="note">Nothing needed right now.</p>');
     if(afterRem>0&&moveAmt>0){
       t2.push(`<div class="act"><p>Move ${money(S.approvedMove||moveAmt)} from your Profit account (${money(S.balances.Profit)}) to Operating before ${nice((base.below||base.low).day)}.</p>
       <p class="imp rev">Covers the gap to your buffer${moveAmt<afterRem?' partly':''}, even if the reminders don\u2019t work. You can move it back once the invoices land.</p>
-      <div class="row">${S.approvedMove?`<span class="done">✓ Approved by you (simulated)</span><button class="ghost" id="aMoveUndo">Undo</button>`:`<button id="aMove">Approve move</button>`}</div>
+      ${moveState(moveAmt,afterRem)}
       ${proof('Why this amount',`-- gap = buffer - lowest projected balance, rounded up to $100\nSELECT ceil((${buffer} - min(balance)) / 100) * 100 AS gap FROM daily_balance;  -- ${money(Math.ceil(afterRem/100)*100)}`,null)}</div>`);
     }
     if(afterRem>0&&supplier){
       t2.push(`<div class="act rev"><p>Ask Ferguson Supply to push the ${nice(supplier.d)} payment (~${money(-supplier.amount)}) back 7 days.</p>
       <p class="imp rev">Moves money out after payroll instead of before it. Check your supplier terms first.</p>
-      <div class="row">${S.delayed?`<span class="done">✓ Approved by you (simulated)</span><button class="ghost" id="aDelUndo">Undo</button>`:`<button id="aDel">Approve</button>`}</div>
+      ${supState(supplier)}
       ${proof('Rows behind this',`SELECT * FROM upcoming WHERE category = 'Materials' AND d <= '${(base.below||base.low).day}'`,[supplier],[['description','Payee'],['amount','Amount','n'],['d','Date']])}</div>`);
     }
     if(!t2.length)t2.push('<p class="note">Nothing needs your OK right now.</p>');
@@ -452,20 +462,20 @@ SELECT strftime(day, '%Y-%m-%d') AS day, ${bal} + sum(coalesce(amt, 0)) OVER (OR
       <div class="card tier"><h3>Never</h3><p class="why">Hard rules, whatever the numbers say.</p>${t3.join('')}</div></div>`;
   }
   $('actions').innerHTML=html;
-  const on=(id,fn)=>{const el=$(id);if(el)el.onclick=()=>{fn();run()}};
-  on('aUndo',()=>S.remindersUndone=true);on('aRem',()=>S.remindersUndone=false);
-  on('aMove',()=>S.approvedMove=moveAmt);on('aMoveUndo',()=>S.approvedMove=0);
-  on('aDel',()=>S.delayed=true);on('aDelUndo',()=>S.delayed=false);
+  if(S.mode==='sample'&&gate&&overdue.length&&!S.remLogged&&!S.silent){S.remLogged=true;logAct('Assistant',`Scheduled payment reminders to ${overdue.map(r=>r.customer).join(' and ')} for ${fmtT(SEND_AT)}`,'Can be cancelled until '+fmtT(SEND_AT))}
+  $('actlog').innerHTML=S.log.length?`<table><thead><tr><th>Time</th><th>Who</th><th>What happened</th><th>Undo</th></tr></thead><tbody>${S.log.map(e=>`<tr><td>${esc(fmtT(e.t))}</td><td>${esc(e.who)}</td><td style="white-space:normal">${esc(e.what)}</td><td style="white-space:normal" class="note">${esc(e.undo)}</td></tr>`).join('')}</tbody></table>`:'<p class="note">Nothing yet.</p>';
+  updateClock();
 
   const record={as_of:ASOF,business:S.mode==='sample'?'Northside Plumbing Co. (sample)':'Uploaded data',question:'Can I cover payroll and bills for the next 30 days?',
     trust_checks:checks.map(c=>({check:c.name,status:c.s,detail:c.d})),advice_allowed:gate,
     answer:gate?{lowest_balance:Math.round(L.balance),lowest_on:L.day,buffer,first_day_below_buffer:fin.below?fin.below.day:null}:null,
     allowed_actions:gate?{on_its_own:['send_invoice_reminder'],ask_owner_first:['move_between_own_accounts','ask_supplier_to_delay_payment'],never:['use_tax_account','change_payroll','move_money_out_of_business']}:'none until checks pass',
+    undo_rules:{send_invoice_reminder:'held in an outbox until the send time; cancel any time before it; once sent it cannot be unsent',move_between_own_accounts:'reversed by moving the money back, which the owner approves',ask_supplier_to_delay_payment:'cancel until the supplier replies; once they agree it is an agreement and cannot be undone'},
     engine:'DuckDB '+ver+' in the browser; raw data never left the device'};
   $('record').textContent=JSON.stringify(record,null,2);
   LAST={gate,checks,base,fin,withRem,events,invRows,overdue,supplier,payDays,lowDay:L.day,belowDay:fin.below?fin.below.day:null,baseBelowDay:base.below?base.below.day:null,
     baseLow:base.low.balance,finLow:fin.low.balance,record,moveAmt,afterRem,buffer,html,
-    remindShown:S.mode==='sample'&&gate&&overdue.length>0&&!S.remindersUndone,overdueIds:overdue.map(r=>r.invoice_id)};
+    remindShown:S.mode==='sample'&&gate&&overdue.length>0&&(S.rem==='scheduled'||S.rem==='sent'),overdueIds:overdue.map(r=>r.invoice_id)};
   $('qcount').textContent=qlog.length;
   renderJourney();
   $('qlog').innerHTML=qlog.map((x,i)=>`<p style="margin:10px 0 2px;font-size:14px"><b>${i+1}. ${esc(x.label)}</b> <span class="note">${x.ms.toFixed(1)} ms · ${x.n} rows</span></p><pre>${esc(x.sql)}</pre>`).join('');
@@ -515,18 +525,72 @@ async function loadUpload(file){
 }
 
 
+
+/* ---------- workflows: realistic undo ---------- */
+function fmtT(m){const h=Math.floor(m/60),mm=String(m%60).padStart(2,'0');return `${(h%12)||12}:${mm} ${h<12?'AM':'PM'}`}
+function logAct(who,what,undo){if(!S.silent)S.log.push({t:S.now,who,what,undo})}
+function remState(names,gate){
+  if(S.rem==='scheduled')return `<p>✓ Scheduled to send at <b>${fmtT(SEND_AT)}</b>. Nothing has gone out yet, so you can cancel until then.</p><div class="row"><button class="ghost" data-act="cancelRem">Undo: cancel before ${fmtT(SEND_AT)}</button></div>`;
+  if(S.rem==='cancelled')return `<p>Cancelled. Nothing was sent.</p><div class="row"><button class="ghost" data-act="${S.now<SEND_AT?'schedRem':'sendRemNow'}">${S.now<SEND_AT?`Schedule again for ${fmtT(SEND_AT)}`:'Send now'}</button></div>`;
+  if(S.rem==='sent')return `<p>✓ Sent at ${fmtT(S.sentAt||SEND_AT)}. Already delivered, so it can’t be unsent.</p><p class="note">If something was wrong, the fix is a follow-up note, not an undo.</p>`;
+  if(S.rem==='held')return `<p>Held at ${fmtT(SEND_AT)} and not sent, because the data checks were failing.</p>${gate?`<div class="row"><button data-act="sendRemNow">Send now</button><button class="ghost" data-act="cancelRem">Cancel</button></div>`:''}`;
+  return '';
+}
+function moveState(amt,lowWithout){
+  if(S.moveState==='done')return `<p>✓ Moved ${money(S.approvedMove)} at ${fmtT(S.moveAt)}. It’s between your own accounts, so it happened right away.</p><div class="row"><button class="ghost" data-act="askBack">Undo: move it back</button></div>`;
+  if(S.moveState==='confirmBack')return `<p><b>Move ${money(S.approvedMove)} back to Profit?</b> Your lowest point would drop to ${money(lowWithout)}, below your cushion. This is a second transfer; both will show in your history.</p><div class="row"><button data-act="moveBack">Yes, move it back</button><button class="ghost" data-act="keepMove">Keep it</button></div>`;
+  if(S.moveState==='reversed')return `<p>Moved back to Profit at ${fmtT(S.backAt)}. You’re below your cushion again.</p><div class="row"><button data-act="approve">Approve again</button></div>`;
+  return `${S.prepared?'<p class="note">Prepared by Jordan, your office manager.</p>':''}<div class="row"><button data-act="approve">Approve move</button><button class="ghost" data-act="notnow">Not now</button></div>`;
+}
+function supState(sup){
+  if(!sup)return '';
+  if(S.sup==='requested')return `<p>✓ Request sent at ${fmtT(S.supAt)}. You can cancel it until Ferguson replies.</p><div class="row"><button class="ghost" data-act="cancelSup">Undo: cancel the request</button></div>`;
+  if(S.sup==='cancelled')return `<p>Request cancelled before Ferguson replied.</p><div class="row"><button class="ghost" data-act="reqSup">Send again</button></div>`;
+  if(S.sup==='agreed')return `<p>✓ Ferguson agreed at ${fmtT(REPLY_AT)}: the payment moves 7 days later. That’s now an agreement with Ferguson, so it can’t be undone here.</p>`;
+  return `<div class="row"><button data-act="reqSup">Send request</button></div>`;
+}
+function skipTo(t){
+  const was=S.now;S.now=t;
+  if(was<SEND_AT&&t>=SEND_AT&&S.rem==='scheduled'){
+    if(LAST&&LAST.gate){S.rem='sent';S.sentAt=SEND_AT;S.now=SEND_AT;logAct('Assistant','Sent the scheduled payment reminders','Can’t be undone: delivered');S.now=t}
+    else{S.rem='held';S.now=SEND_AT;logAct('Assistant','Held the reminders: data checks were failing','Not sent');S.now=t}}
+  if(was<REPLY_AT&&t>=REPLY_AT&&S.sup==='requested'){S.sup='agreed';S.delayed=true;S.now=REPLY_AT;logAct('Ferguson Supply','Agreed to move the payment 7 days later','Can’t be undone here: it’s an agreement');S.now=t}
+}
+function resetDay(){Object.assign(S,{now:462,rem:'scheduled',moveState:'none',approvedMove:0,sup:'none',delayed:false,prepared:false,imported:false,log:[],remLogged:false});
+  for(const k of ['bStale','bDup','bUncat'])$(k).checked=false}
+function doAct(a){
+  const who=JP==='team'?'Jordan':JP==='bookkeeper'?'Alex':'Sam',L=LAST;
+  if(a==='cancelRem'){S.rem='cancelled';logAct(who,'Cancelled the scheduled payment reminders','Nothing was sent')}
+  if(a==='schedRem'){S.rem='scheduled';logAct(who,`Scheduled the reminders again for ${fmtT(SEND_AT)}`,`Can be cancelled until ${fmtT(SEND_AT)}`)}
+  if(a==='sendRemNow'){S.rem='sent';S.sentAt=S.now;logAct(who,'Sent the payment reminders now','Can’t be undone: delivered')}
+  if(a==='approve'){S.approvedMove=L.moveAmt;S.moveState='done';S.moveAt=S.now;logAct('Sam',`Approved moving ${money(L.moveAmt)} from Profit to the main account${S.prepared?' (prepared by Jordan)':''}`,'Reversible: move it back, with Sam’s OK')}
+  if(a==='notnow'){logAct('Sam','Said “not now” to the suggested move','Nothing changed');JS.owner=4}
+  if(a==='askBack')S.moveState='confirmBack';
+  if(a==='keepMove')S.moveState='done';
+  if(a==='moveBack'){logAct('Sam',`Moved ${money(S.approvedMove)} back to Profit`,'A second transfer, not a delete; both stay in the history');S.approvedMove=0;S.moveState='reversed';S.backAt=S.now}
+  if(a==='reqSup'){S.sup='requested';S.supAt=S.now;logAct(who,'Asked Ferguson Supply to push the next payment back 7 days','Can be cancelled until Ferguson replies')}
+  if(a==='cancelSup'){S.sup='cancelled';logAct(who,'Cancelled the request to Ferguson Supply','Ferguson hadn’t replied yet')}
+  if(a==='prepare'){S.prepared=true;logAct('Jordan',`Prepared a ${money(L.moveAmt)} move for Sam’s approval`,'Jordan can withdraw it until Sam approves')}
+  if(a==='withdraw'){S.prepared=false;logAct('Jordan','Withdrew the prepared move','Nothing had moved')}
+  if(a==='import'){S.imported=true;$('bDup').checked=true;$('bUncat').checked=true;logAct('Alex','Brought in today’s bank import','Import problems pause advice until fixed')}
+  if(a==='fixDup'){$('bDup').checked=false;logAct('Alex','Removed 3 duplicate payments','Can be restored from the import history')}
+  if(a==='fixCat'){$('bUncat').checked=false;logAct('Alex','Categorized spending as Materials and Fuel','Categories can be changed again any time')}
+}
+function updateClock(){$('clockT').textContent=fmtT(S.now);const n=S.now<SEND_AT?SEND_AT:S.now<REPLY_AT?REPLY_AT:null;$('clockSkip').disabled=!n;$('clockSkip').textContent=n?`Skip to ${fmtT(n)}`:'End of demo day'}
+
 /* ---------- evals ---------- */
 const CASES={clean:{},stale:{bStale:true},dup:{bDup:true},uncat:{bUncat:true},late40:{late:40},hire:{hire:true},tight:{buf:20000}};
 async function runCase(cfg,state={}){
   const d={bStale:false,bDup:false,bUncat:false,late:S.usualLate??18,hire:false,buf:8000,...cfg};
   for(const k of ['bStale','bDup','bUncat','hire'])$(k).checked=d[k];
   $('late').value=d.late;$('buf').value=d.buf;
-  S.approvedMove=state.move||0;S.delayed=false;S.remindersUndone=false;
+  S.approvedMove=state.move||0;S.delayed=false;S.rem='scheduled';S.moveState=state.move?'done':'none';S.sup='none';
   await run();return LAST;
 }
 async function runEvals(){
   if(S.mode!=='sample'){$('evalsum').textContent='Evals run on the sample data. Click "Back to sample data" first.';return}
   if(busy)return;busy=true;$('runEvals').disabled=true;$('evalsum').textContent='Running…';
+  const snap=JSON.stringify({now:S.now,rem:S.rem,moveState:S.moveState,approvedMove:S.approvedMove,sup:S.sup,delayed:S.delayed,prepared:S.prepared,sentAt:S.sentAt,moveAt:S.moveAt,supAt:S.supAt,backAt:S.backAt});S.silent=true;
   const keep={bStale:$('bStale').checked,bDup:$('bDup').checked,bUncat:$('bUncat').checked,hire:$('hire').checked,late:$('late').value,buf:$('buf').value,move:S.approvedMove,del:S.delayed,und:S.remindersUndone};
   const rows=[];const add=(name,method,ok,detail)=>rows.push({name,method,ok,detail});
   try{
@@ -548,11 +612,17 @@ async function runEvals(){
     add('A later customer payment can’t make things look better','Comparison of two runs',l.finLow<=c.finLow+0.5,`low ${money(l.finLow)} (40 days late) vs ${money(c.finLow)} (usual)`);
     const h=await runCase(CASES.hire);
     add('A new hire lowers the low point by at least one pay run','Comparison of two runs',h.finLow<=c.finLow-2100+0.5,`low ${money(h.finLow)} vs ${money(c.finLow)}`);
+    {const c2=await runCase(CASES.clean);const v=()=>JOURNEYS.owner.steps[3].view(LAST);
+     S.rem='scheduled';S.now=462;const a1=/data-act="cancelRem"/.test(v());
+     S.rem='sent';const a2=!/data-act="cancelRem"/.test(v());
+     S.moveState='done';S.approvedMove=c2.moveAmt;const a3=/data-act="askBack"/.test(v());
+     S.sup='requested';const a4=/data-act="cancelSup"/.test(supState(c2.supplier));S.sup='agreed';const a5=!/data-act="cancelSup"/.test(supState(c2.supplier));
+     add('Offers undo only while it can really work','Code check on the screens Sam and Jordan see',a1&&a2&&a3&&a4&&a5,`reminder: cancel before send ${a1?'✓':'✗'}, no undo after send ${a2?'✓':'✗'}; move: move-back offered ${a3?'✓':'✗'}; supplier: cancel while waiting ${a4?'✓':'✗'}, none once agreed ${a5?'✓':'✗'}`)}
     rows.push({name:'Low point within ±10% of what really happened',method:'Shadow mode on real businesses',ok:null,detail:'Needs real outcomes: not runnable on sample data'});
     rows.push({name:'Reminder wording is polite and on-brand',method:'Model grader, then human review',ok:null,detail:'No AI-written text in v0'});
   }catch(e){$('evalsum').innerHTML=`<span class="err">Evals stopped: ${esc(e.message)}</span>`}
   for(const k of ['bStale','bDup','bUncat','hire'])$(k).checked=keep[k];$('late').value=keep.late;$('buf').value=keep.buf;
-  S.approvedMove=keep.move;S.delayed=keep.del;S.remindersUndone=keep.und;
+  Object.assign(S,JSON.parse(snap));S.silent=false;
   await run();busy=false;$('runEvals').disabled=false;
   const ran=rows.filter(r=>r.ok!==null),pass=ran.filter(r=>r.ok).length;
   $('evalsum').textContent=`${pass} of ${ran.length} passed · ${rows.length-ran.length} need real data or a model grader`;
@@ -572,7 +642,7 @@ const headline=L=>!L.gate?'We’re double-checking your numbers':L.finLow<0?`Hea
 const payBefore=L=>L.payDays.find(d=>d<=(L.baseBelowDay||L.lowDay))||L.payDays[0];
 const failed=L=>L.checks.filter(c=>c.s==='fail');
 const paused=L=>`<h3>Paused while your books are checked</h3><p>We found problems that could make the numbers wrong:</p><ul style="margin:0;padding-left:20px;font-size:15px">${failed(L).map(c=>`<li>${esc(plainFail[c.k]||c.d)}</li>`).join('')}</ul><p>${failed(L).some(c=>c.k==='fresh')?'Reconnect your bank feed in Settings. '+(failed(L).length>1?'Alex, your bookkeeper, has been asked to fix the rest.':''):'Alex, your bookkeeper, has been asked to fix them.'} Your answer comes back as soon as it’s fixed.</p><button data-act="go-bookkeeper">See Alex’s view</button>`;
-const phone=(inner,time='7:42')=>`<div class="phone"><div class="bar"><span>${time}</span><span>Relay</span></div>${inner}</div>`;
+const phone=(inner,time=fmtT(S.now).replace(/ [AP]M/,''))=>`<div class="phone"><div class="bar"><span>${time}</span><span>Relay</span></div>${inner}</div>`;
 const desk=(title,inner)=>`<div class="desk"><div class="tb">${esc(title)}</div><div class="bd">${inner}</div></div>`;
 const samNow=L=>`<div class="mini"><b>Sam’s phone right now</b>${esc(headline(L))}${L.gate?` · lowest ${money(L.finLow)} on ${nice(L.lowDay)}`:''}</div>`;
 
@@ -580,7 +650,7 @@ const JOURNEYS={
  owner:{role:'Persona 1 of 3 · Business owner',name:'Sam, owner of Northside Plumbing',goal:'Runs an 8-person plumbing company and checks the Relay app on his phone before the first job. Wants to know: will payroll clear on Friday?',
   steps:[
    {t:'The morning nudge',say:'Sam doesn’t open a dashboard. A short nudge arrives only when something needs his attention.',next:'Open the app',
-    view:L=>phone(`<div class="lock">7:42</div><p style="text-align:center" class="note">Wednesday</p><div class="notif"><b>Relay · now</b>${!L.gate?'Your bookkeeper is fixing a couple of things in your books. Advice is on hold until then.':L.finLow<L.buffer?`Heads up: payroll on ${nice(payBefore(L))} leaves you below your cushion. Tap to see why.`:'All good. Payroll and bills are covered for the next 30 days.'}</div>`)},
+    view:L=>phone(`<div class="lock">${fmtT(S.now).replace(/ [AP]M/,'')}</div><p style="text-align:center" class="note">Wednesday</p><div class="notif"><b>Relay · now</b>${!L.gate?'Your bookkeeper is fixing a couple of things in your books. Advice is on hold until then.':L.finLow<L.buffer?`Heads up: payroll on ${nice(payBefore(L))} leaves you below your cushion. Tap to see why.`:'All good. Payroll and bills are covered for the next 30 days.'}</div>`)},
    {t:'The answer',say:'One sentence in plain words, the date that matters, and a sign the numbers were checked.',
     view:L=>phone(!L.gate?paused(L):`<p class="note">Cash check</p><h3>${esc(headline(L))}</h3><p>Lowest point: <b>${money(L.finLow)}</b> on ${nice(L.lowDay)}. You like to keep at least ${money(L.buffer)}.</p>${spark(L)}<p class="note">✓ Checked this morning: bank feed up to date, no double payments, spending sorted.</p>`)},
    {t:'Why',say:'The reasons in Sam’s own terms: his payroll, his rent, his clients. Nothing to decode.',
@@ -588,14 +658,15 @@ const JOURNEYS={
       const out=L.events.filter(e=>e.d<=until&&(e.category==='Payroll'||e.category==='Rent')).map(e=>`<div class="tile"><span class="lbl">${e.category==='Payroll'?'Payroll':'Rent'} · ${nice(e.d)}</span><span>${money(e.amount)} goes out</span></div>`);
       const inv=L.invRows.filter(r=>r.due<=until).map(r=>`<div class="tile"><span class="lbl">Waiting on ${esc(r.customer)}</span><span>Owes you ${money(r.amount)}. Due ${nice(r.due)}, and usually pays about ${r.usual_late} days late.</span></div>`);
       return phone(`<p class="note">Why it’s tight</p><h3>Money goes out before it comes in</h3>${out.join('')}${inv.join('')}`)}},
-   {t:'What happens next',say:'Safe things are already done and can be undone. Moving money waits for Sam. Tax savings are never touched.',
+   {t:'What happens next',say:'Reminders wait in an outbox until 10:00 AM, so Sam can cancel them until then. Moving money waits for his OK and can be moved back. Tax savings are never touched. Try the demo clock at the top to see the undo windows close.',
     view:L=>{if(!L.gate)return phone(paused(L));const names=L.overdue.map(r=>r.customer).join(' and ');
-      const done=L.overdue.length?`<div class="tile"><span class="lbl">Done for you</span>${S.remindersUndone?`<span>Reminders to ${esc(names)} were not sent.</span><button class="ghost" data-act="sendRem">Send them</button>`:`<span>✓ Sent friendly payment reminders to ${esc(names)}.</span><button class="ghost" data-act="undoRem">Undo</button>`}</div>`:'';
-      const need=L.afterRem>0&&L.moveAmt>0?`<div class="tile need"><span class="lbl">Needs you</span>${S.approvedMove?`<span>✓ Approved: ${money(S.approvedMove)} moved from Profit to your main account (simulated).</span><button class="ghost" data-act="unapprove">Undo</button>`:`<span>Move ${money(L.moveAmt)} from your Profit account (${money(S.balances.Profit)}) to cover the gap before ${nice(payBefore(L))}.</span>${S.prepared?'<span class="note">Prepared by Jordan, your office manager.</span>':''}<div class="row"><button data-act="approve">Approve</button><button class="ghost" data-act="notnow">Not now</button></div>`}</div>`:`<div class="tile"><span class="lbl">Needs you</span><span>Nothing today.</span></div>`;
-      return phone(`<p class="note">What happens next</p>${done}${need}<div class="tile"><span class="lbl">Off-limits</span><span>Your Tax savings (${money(S.balances.Tax)}) stay put. The app never uses them.</span></div>`)}},
+      const done=L.overdue.length?`<div class="tile"><span class="lbl">Done for you · payment reminders to ${esc(names)}</span>${remState(names,L.gate)}</div>`:'';
+      const need=(L.afterRem>0&&L.moveAmt>0)||S.moveState!=='none'?`<div class="tile need"><span class="lbl">Needs you</span><span>Move ${money(S.approvedMove||L.moveAmt)} from your Profit account (${money(S.balances.Profit)}) to cover the gap before ${nice(payBefore(L))}.</span>${moveState(L.moveAmt,L.baseLow)}</div>`:`<div class="tile"><span class="lbl">Needs you</span><span>Nothing today.</span></div>`;
+      const recent=S.log.slice(-3).reverse().map(e=>`<li>${esc(fmtT(e.t))} · ${esc(e.who)}: ${esc(e.what)}</li>`).join('');
+      return phone(`<p class="note">What happens next</p>${done}${need}<div class="tile"><span class="lbl">Off-limits</span><span>Your Tax savings (${money(S.balances.Tax)}) stay put. The app never uses them.</span></div>${recent?`<div><p class="note" style="font-size:12px;margin-bottom:4px">Activity</p><ul style="margin:0;padding-left:18px;font-size:12px;color:var(--mute)">${recent}</ul></div>`:''}`)}},
    {t:'Covered',say:'Sam sees the result of what he approved, and when the app will check again.',next:'Next: Alex’s journey',
     view:L=>{if(!L.gate)return phone(paused(L));const ok=L.finLow>=L.buffer;
-      return phone(`<p class="note">Cash check</p><h3>${ok?'You’re covered':'Still tight'}</h3><p>${ok?`Lowest point now <b>${money(L.finLow)}</b> on ${nice(L.lowDay)}, above your ${money(L.buffer)} cushion.`:`Lowest point <b>${money(L.finLow)}</b> on ${nice(L.lowDay)}. We’ll check again before payroll and tell you if the invoices arrived.`}</p>${spark(L)}${!ok&&L.withRem.low.balance>L.finLow+1&&!S.remindersUndone?`<p class="note">If your clients pay on time after the reminders, your lowest point would be ${money(L.withRem.low.balance)}. The app doesn’t count on that.</p>`:''}`)}}
+      return phone(`<p class="note">Cash check</p><h3>${ok?'You’re covered':'Still tight'}</h3><p>${ok?`Lowest point now <b>${money(L.finLow)}</b> on ${nice(L.lowDay)}, above your ${money(L.buffer)} cushion.`:`Lowest point <b>${money(L.finLow)}</b> on ${nice(L.lowDay)}. We’ll check again before payroll and tell you if the invoices arrived.`}</p>${spark(L)}${!ok&&L.withRem.low.balance>L.finLow+1&&(S.rem==='scheduled'||S.rem==='sent')?`<p class="note">If your clients pay on time after the reminders, your lowest point would be ${money(L.withRem.low.balance)}. The app doesn’t count on that.</p>`:''}`)}}
   ]},
  bookkeeper:{role:'Persona 2 of 3 · Bookkeeper',name:'Alex, outside bookkeeper',goal:'Keeps the books for Northside and about 30 other small businesses. Wants clean books, so owners’ tools give the right answers.',
   steps:[
@@ -617,14 +688,15 @@ const JOURNEYS={
   steps:[
    {t:'See the cash check',say:'Jordan sees the same answer and reasons as Sam, so they’re working from one set of numbers.',
     view:L=>desk('Relay · Northside Plumbing · Cash check',!L.gate?`<p class="bad">Paused: the books have problems Alex is fixing.</p>`:`<p class="big2">${money(L.finLow)}</p><p>Lowest point, on ${nice(L.lowDay)}. ${L.finLow<L.buffer?`That’s ${money(L.buffer-L.finLow)} under Sam’s ${money(L.buffer)} cushion.`:`Above Sam’s ${money(L.buffer)} cushion.`}</p>${spark(L)}`)},
-   {t:'Prepare the fix',say:'Jordan can prepare the move, but the permission levels decide who approves it.',
+   {t:'Prepare the fix',say:'Jordan can prepare the move (and withdraw it until Sam approves) and ask a supplier for more time (cancellable until they reply). Approving money moves is Sam’s call.',
     view:L=>{if(!L.gate)return desk('Relay · Prepare a payment','<p class="bad">Nothing to prepare while advice is paused.</p>');
       if(!(L.afterRem>0&&L.moveAmt>0))return desk('Relay · Prepare a payment','<p class="ok">No gap to cover. Nothing to prepare.</p>');
-      return desk('Relay · Prepare a payment',`<div class="tile need"><span class="lbl">Suggested</span><span>Move ${money(L.moveAmt)} from Profit to the main account before ${nice(payBefore(L))}.</span>${S.approvedMove?'<span class="ok">✓ Sam already approved this.</span>':S.prepared?'<span class="ok">✓ Prepared and sent to Sam for approval.</span>':'<div class="row"><button data-act="prepare">Prepare for Sam’s approval</button></div>'}</div>
+      return desk('Relay · Prepare a payment',`<div class="tile need"><span class="lbl">Suggested</span><span>Move ${money(L.moveAmt)} from Profit to the main account before ${nice(payBefore(L))}.</span>${S.moveState==='done'?'<span class="ok">✓ Sam approved this, so it can’t be withdrawn now. Only Sam can move it back.</span>':S.prepared?'<span class="ok">✓ Prepared and sent to Sam for approval.</span><div class="row"><button class="ghost" data-act="withdraw">Undo: withdraw before Sam approves</button></div>':'<div class="row"><button data-act="prepare">Prepare for Sam’s approval</button></div>'}</div>
+       ${L.supplier?`<div class="tile"><span class="lbl">Also an option</span><span>Ask Ferguson Supply to push the ${nice(L.supplier.d)} payment (~${money(-L.supplier.amount)}) back 7 days, until after payroll.</span>${supState(L.supplier)}</div>`:''}
        <div class="tile"><div class="row"><button disabled>Approve it myself</button></div><span class="note">Only Sam, the owner, can approve moving money.</span></div>
        <div class="tile"><div class="row"><button disabled>Use Tax savings instead</button></div><span class="note">Not available to anyone, including the assistant.</span></div>`)}},
    {t:'Hand off to Sam',say:'The request lands on Sam’s phone with Jordan’s name on it.',next:'Next: under the hood',
-    view:L=>desk('Relay · Approvals',S.approvedMove?'<p class="ok">✓ Sam approved the move.</p>':S.prepared?`<p class="ok">✓ Sent to Sam for approval.</p><p>Waiting for Sam.</p><div class="row"><button class="ghost" data-act="go-owner-3">See it on Sam’s phone</button></div>`:'<p>Nothing sent yet.</p><div class="row"><button class="ghost" data-act="back">Back</button></div>')}
+    view:L=>desk('Relay · Approvals',S.moveState==='done'?'<p class="ok">✓ Sam approved the move.</p>':S.moveState==='reversed'?'<p>Sam approved the move, then moved it back to Profit.</p>':S.prepared?`<p class="ok">✓ Sent to Sam for approval.</p><p>Waiting for Sam.</p><div class="row"><button class="ghost" data-act="go-owner-3">See it on Sam’s phone</button></div>`:'<p>Nothing sent yet.</p><div class="row"><button class="ghost" data-act="back">Back</button></div>')}
   ]}
 };
 let jr=0;
@@ -637,17 +709,15 @@ async function renderJourney(){
   const html=await st.view(LAST);if(my!==jr)return;$('jStage').innerHTML=html;
 }
 $('jSteps').onclick=e=>{const b=e.target.closest('[data-step]');if(b){JS[JP]=+b.dataset.step;renderJourney()}};
+$('actions').onclick=e=>{const b=e.target.closest('[data-act]');if(!b)return;doAct(b.dataset.act);go()};
+$('clockSkip').onclick=()=>{skipTo(S.now<SEND_AT?SEND_AT:REPLY_AT);go()};
+$('clockReset').onclick=()=>{resetDay();JS.owner=0;JS.bookkeeper=0;JS.team=0;go()};
 $('jStage').onclick=e=>{const b=e.target.closest('[data-act]');if(!b)return;const a=b.dataset.act;
   if(a==='go-bookkeeper')return setPersona('bookkeeper',1);
   if(a==='go-owner-1')return setPersona('owner',1);
   if(a==='go-owner-3')return setPersona('owner',3);
   if(a==='back'){JS[JP]=Math.max(0,JS[JP]-1);return renderJourney()}
-  if(a==='undoRem')S.remindersUndone=true;if(a==='sendRem')S.remindersUndone=false;
-  if(a==='approve')S.approvedMove=LAST.moveAmt;if(a==='unapprove'||a==='notnow')S.approvedMove=0;
-  if(a==='notnow'){JS.owner=4}
-  if(a==='prepare')S.prepared=true;
-  if(a==='import'){S.imported=true;$('bDup').checked=true;$('bUncat').checked=true}
-  if(a==='fixDup')$('bDup').checked=false;if(a==='fixCat')$('bUncat').checked=false;
+  doAct(a);
   go()};
 
 /* ---------- wire up ---------- */
@@ -657,7 +727,7 @@ async function go(){if(busy){again=true;return}busy=true;try{await run()}catch(e
 $('runEvals').onclick=runEvals;
 $('copyRec').onclick=async()=>{try{await navigator.clipboard.writeText($('record').textContent);$('copied').textContent='Copied.'}catch(e){$('copied').textContent='Copy blocked here. Select the text instead.'}};
 $('file').onchange=async e=>{const f=e.target.files[0];if(!f)return;try{await loadUpload(f);go()}catch(err){$('upmsg').innerHTML=`<span class="err">${esc(err.message)}</span>`}};
-$('reset').onclick=async()=>{S.approvedMove=0;S.delayed=false;S.remindersUndone=false;$('file').value='';$('upmsg').textContent='';await loadSample();go()};
+$('reset').onclick=async()=>{resetDay();$('file').value='';$('upmsg').textContent='';await loadSample();go()};
 const HASH={owner:'owner',bookkeeper:'bookkeeper',team:'team-member',reviewer:'under-the-hood'};
 const fromHash=()=>Object.keys(HASH).find(k=>'#'+HASH[k]===location.hash)||'owner';
 function setPersona(p,step){JP=p;if(step!=null)JS[p]=step;document.body.dataset.p=p;
