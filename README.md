@@ -97,6 +97,12 @@ A spreadsheet updated by hand, gut feel, an accountant once a month, or overdraf
 
 Cash decisions in a small business aren't made by one person. The owner decides, a bookkeeper keeps the data clean, and someone in the office does the legwork. The demo walks through all three as guided journeys (pick them at the top of the page). Names and the business are invented.
 
+Each journey moves forward only when its step is really done. Later steps stay locked, and the screen says what's left to do. Some examples:
+- Alex can't reach "Books are clean" until every data check passes.
+- Sam can't finish until he approves the move or says "not now".
+- Jordan can't hand off until the move is prepared.
+- If the books break, Sam's and Jordan's journeys pause at the answer until Alex fixes them.
+
 ### Sam, owner of Northside Plumbing
 | | |
 |---|---|
@@ -113,7 +119,7 @@ Cash decisions in a small business aren't made by one person. The owner decides,
 | **Who** | Keeps the books for Northside and about 30 other small businesses. |
 | **Wants** | Clean books, so owners' tools give the right answers and nobody calls in a panic. |
 | **Pain today** | Messy bank imports (duplicates, uncategorized spending) quietly make every report wrong. |
-| **Journey in the demo** | 1. Brings in today's import, and Sam's phone switches to "Paused while your books are checked" → 2. Fixes each flagged problem with one click; the checks re-run after each fix → 3. Hands back to Sam: his answer is back |
+| **Journey in the demo** | 1. Brings in today's import, and Sam's phone switches to "Paused while your books are checked" → 2. Fixes each flagged problem with one click; the checks re-run after each fix → 3. Books are clean: every check passes, and Sam's answer comes back on its own (Alex doesn't send anything) |
 | **Done looks like** | Every data check passes, and Sam's answer is unlocked. |
 | **Can / can't** | Fixes the books. Can't take any money action. |
 
@@ -595,8 +601,6 @@ A per-action-type **kill switch** turns off "on its own" actions instantly.
 ### Try it in the demo
 Click **Under the hood** at the top (the view for the Relay review team), then **Run evals**. Rows 1–7 and 10 run as 11 checks through the same queries as the page, and show pass or fail with the detail behind each result. Rows 8–9 are shown as "Not run here", because they need real outcomes or AI-written text.
 
-*Further reading that shaped this section:* [Why AI evals suddenly became a product skill](https://maryamaidini.substack.com/p/why-ai-evals-suddenly-became-a-product).
-
 ---
 
 ## 21. Roles and permissions
@@ -731,7 +735,7 @@ Sample data is generated in the page for a made-up company (Northside Plumbing C
 
 ## 27. AI note
 
-Built with Claude (demo code, SQL, write-up), used as a sparring partner. Guru went through each decision himself: the problem and who it's for, the scope, the trust checks and their thresholds, the permission levels, and the platform design. He evaluated each one with Claude, which pushed back on gaps and weak spots before anything was kept.
+Built with Claude (demo code, SQL, write-up), used as a sparring partner. Guru made each decision himself: the problem and who it's for, the scope, the trust checks and their thresholds, the permission levels, and the platform design. He tested each one with Claude, which pushed back on gaps and weak spots, especially around what the AI agent can access, what needs the owner's approval, what it must never do, and what goes into the evals.
 
 Every demo figure in this README was re-run in the demo. Rejected along the way: an AI-written forecast (can't be traced back to transactions) and auto-moving money (can't be safely undone).
 
